@@ -31,7 +31,7 @@ jobs:
           path: app/build/outputs/apk/debug/app-debug.apk
 
   build-ios:
-    runs-on: macos-latest
+    runs-on: macos-14
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
