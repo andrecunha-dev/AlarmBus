@@ -45,5 +45,5 @@ jobs:
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
 
-      - name: Build Project
-        run: ./gradlew build
+      - name: Build Android App on macOS
+        run: ./gradlew assembleDebug
