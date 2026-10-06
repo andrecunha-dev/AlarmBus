@@ -31,8 +31,7 @@ jobs:
           path: app/build/outputs/apk/debug/app-debug.apk
 
   build-ios:
-    runs-on: macos-13
-    timeout-minutes: 15
+    runs-on: macos-latest
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
@@ -46,5 +45,5 @@ jobs:
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
 
-      - name: Build Android App on macOS
+      - name: Build Project
         run: ./gradlew assembleDebug
