@@ -45,5 +45,15 @@ jobs:
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
 
-      - name: Build Project
+      - name: Build Android App on macOS
         run: ./gradlew assembleDebug
+
+      - name: Create iOS Package
+        run: |
+          zip -r AlarmBus-iOS-App.zip iosApp app .github
+
+      - name: Upload iOS Package
+        uses: actions/upload-artifact@v4
+        with:
+          name: AlarmBus-iOS-App
+          path: AlarmBus-iOS-App.zip
