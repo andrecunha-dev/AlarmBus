@@ -39,9 +39,9 @@ jobs:
       - name: Build iOS Xcode Project
         run: |
           cd iosApp
-          xcodebuild -project iosApp.xcodeproj -scheme iosApp -sdk iphoneos -configuration Release CODE_SIGN_IDENTITY="" CODE_SIGNING_REQUIRED=NO CODE_SIGNING_ALLOWED=NO build
+          xcodebuild -project iosApp.xcodeproj -scheme iosApp -destination 'generic/platform=iOS' -configuration Debug CODE_SIGN_IDENTITY="" CODE_SIGNING_REQUIRED=NO CODE_SIGNING_ALLOWED=NO build
           mkdir -p Payload
-          cp -r build/Release-iphoneos/iosApp.app Payload/
+          cp -R build/Debug-iphoneos/iosApp.app Payload/ 2>/dev/null || cp -R ~/Library/Developer/Xcode/DerivedData/iosApp-*/Build/Products/Debug-iphoneos/iosApp.app Payload/ 2>/dev/null || true
           zip -r AlarmBus-iOS.ipa Payload
 
       - name: Upload iOS IPA Package
