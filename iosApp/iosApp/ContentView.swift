@@ -18,23 +18,23 @@ class LocationManager: NSObject, ObservableObject, CLLocationManagerDelegate {
         super.init()
         manager.delegate = self
         manager.desiredAccuracy = kCLLocationAccuracyBest
-        manager.allowsBackgroundLocationUpdates = true
-        manager.showsBackgroundLocationIndicator = true
-        manager.requestAlwaysAuthorization()
+        manager.requestWhenInUseAuthorization()
         manager.startUpdatingLocation()
     }
 
     func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
         guard let loc = locations.last else { return }
-        currentLocation = loc.coordinate
+        DispatchQueue.main.async {
+            self.currentLocation = loc.coordinate
 
-        if let dest = destinationLocation, isAlarmActive {
-            let destLoc = CLLocation(latitude: dest.latitude, longitude: dest.longitude)
-            let dist = loc.distance(from: destLoc)
-            distanceToDest = dist
+            if let dest = self.destinationLocation, self.isAlarmActive {
+                let destLoc = CLLocation(latitude: dest.latitude, longitude: dest.longitude)
+                let dist = loc.distance(from: destLoc)
+                self.distanceToDest = dist
 
-            if dist <= alertDistanceMeters {
-                onTriggerAlarm?()
+                if dist <= self.alertDistanceMeters {
+                    self.onTriggerAlarm?()
+                }
             }
         }
     }
@@ -311,7 +311,7 @@ struct ContentView: View {
             .navigationBarTitleDisplayMode(.inline)
             .sheet(isPresented: $showMapPicker) {
                 MapPickerView(
-                    initialCoordinate: destinationCoordinate ?? locationManager.currentLocation ?? CLLocationCoordinate2D(latitude: -23.55052, longitude: -46.633308),
+                    currentCoord: destinationCoordinate ?? locationManager.currentLocation ?? CLLocationCoordinate2D(latitude: -23.55052, longitude: -46.633308),
                     onSelect: { coord, address in
                         destinationCoordinate = coord
                         selectedAddress = address
@@ -334,9 +334,11 @@ struct ContentView: View {
         let geocoder = CLGeocoder()
         geocoder.geocodeAddressString(query) { placemarks, error in
             if let place = placemarks?.first, let location = place.location {
-                destinationCoordinate = location.coordinate
-                selectedAddress = query
-                salvarNoHistorico(query)
+                DispatchQueue.main.async {
+                    self.destinationCoordinate = location.coordinate
+                    self.selectedAddress = query
+                    self.salvarNoHistorico(query)
+                }
             }
         }
     }
@@ -376,6 +378,7 @@ struct MapViewRepresentable: UIViewRepresentable {
     func makeUIView(context: Context) -> MKMapView {
         let map = MKMapView()
         map.showsUserLocation = true
+        map.delegate = context.coordinator
         return map
     }
 
@@ -397,6 +400,23 @@ struct MapViewRepresentable: UIViewRepresentable {
         } else if let current = currentLocation {
             let region = MKCoordinateRegion(center: current, latitudinalMeters: 2000, longitudinalMeters: 2000)
             uiView.setRegion(region, animated: true)
+        }
+    }
+
+    func makeCoordinator() -> Coordinator {
+        Coordinator()
+    }
+
+    class Coordinator: NSObject, MKMapViewDelegate {
+        func mapView(_ mapView: MKMapView, rendererFor overlay: MKOverlay) -> MKOverlayRenderer {
+            if let circleOverlay = overlay as? MKCircle {
+                let renderer = MKCircleRenderer(circle: circleOverlay)
+                renderer.fillColor = UIColor(red: 103/255, green: 80/255, blue: 164/255, alpha: 0.2)
+                renderer.strokeColor = UIColor(red: 103/255, green: 80/255, blue: 164/255, alpha: 0.8)
+                renderer.lineWidth = 2
+                return renderer
+            }
+            return MKOverlayRenderer(overlay: overlay)
         }
     }
 }
@@ -455,7 +475,9 @@ struct MapPickerView: View {
         let loc = CLLocation(latitude: coord.latitude, longitude: coord.longitude)
         geocoder.reverseGeocodeLocation(loc) { placemarks, _ in
             if let p = placemarks?.first {
-                selectedAddress = "\(p.thoroughfare ?? ""), \(p.subThoroughfare ?? "") - \(p.locality ?? "")"
+                DispatchQueue.main.async {
+                    self.selectedAddress = "\(p.thoroughfare ?? ""), \(p.subThoroughfare ?? "") - \(p.locality ?? "")"
+                }
             }
         }
     }
