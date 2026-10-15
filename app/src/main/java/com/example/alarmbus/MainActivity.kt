@@ -390,8 +390,8 @@ class MainActivity : ComponentActivity() {
 
         if (showMapPicker) {
             MapPickerDialog(
-                initialLat = if (destinoLatitude != 0.0) destinoLatitude else localAtualLat,
-                initialLng = if (destinoLongitude != 0.0) destinoLongitude else localAtualLng,
+                initialLat = localAtualLat,
+                initialLng = localAtualLng,
                 onDismiss = { showMapPicker = false },
                 onLocationSelected = { selectedLat, selectedLng, selectedAddress ->
                     destinoLatitude = selectedLat
