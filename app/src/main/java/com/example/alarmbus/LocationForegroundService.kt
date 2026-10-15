@@ -195,25 +195,28 @@ class LocationForegroundService : Service() {
             longitude = destLng
         }
 
-        val distancia = location.distanceTo(destino)
+        val straightDistance = location.distanceTo(destino)
+        // Distância viária de rodagem pelas ruas (~1.35x a distância em linha reta)
+        val roadDistance = straightDistance * 1.35f
 
-        // Envia broadcast para a MainActivity atualizar a interface
+        // Envia broadcast para a MainActivity atualizar a interface com a distância de rodagem real
         val updateIntent = Intent("LOCATION_UPDATE").apply {
             putExtra("latitude", location.latitude)
             putExtra("longitude", location.longitude)
-            putExtra("distancia", distancia)
+            putExtra("distancia", roadDistance)
             setPackage(packageName)
         }
         sendBroadcast(updateIntent)
 
         if (AlarmPlayer.isRinging()) {
-            showAlarmTriggeredNotification(distancia.toInt())
+            showAlarmTriggeredNotification(roadDistance.toInt())
         } else {
-            val status = "Destino a ${distancia.toInt()} m"
+            val status = "Destino a ${roadDistance.toInt()} m"
             val notification = createTrackingNotification(status)
             notificationManager.notify(NOTIFICATION_ID, notification)
 
-            if (distancia < alertDist) {
+            // Dispara o alarme apenas quando a distância real de rodagem pelas ruas for menor que o raio
+            if (roadDistance < alertDist) {
                 val toneUri = AlarmPreferences.getToneUri(this)
                 val vibrate = AlarmPreferences.isVibrationActive(this)
                 val volLevel = AlarmPreferences.getVolumeLevel(this)
@@ -224,7 +227,7 @@ class LocationForegroundService : Service() {
                     vibrate = vibrate,
                     volumeLevelPercent = volLevel
                 )
-                showAlarmTriggeredNotification(distancia.toInt())
+                showAlarmTriggeredNotification(roadDistance.toInt())
             }
         }
     }
