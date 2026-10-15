@@ -1324,21 +1324,31 @@ fun MapPickerDialog(
                     )
                 }
 
+                val hasLocationPermission = ContextCompat.checkSelfPermission(
+                    context, Manifest.permission.ACCESS_FINE_LOCATION
+                ) == PackageManager.PERMISSION_GRANTED
+
                 // Google Map
                 Box(modifier = Modifier.weight(1f)) {
                     GoogleMap(
                         modifier = Modifier.fillMaxSize(),
                         cameraPositionState = cameraPositionState,
                         properties = MapProperties(
+                            isMyLocationEnabled = hasLocationPermission,
                             mapType = if (isPickerSatellite) MapType.HYBRID else MapType.NORMAL
                         ),
                         onMapClick = { latLng ->
                             pickedLat = latLng.latitude
                             pickedLng = latLng.longitude
                         },
+                        onPOIClick = { poi ->
+                            pickedLat = poi.latLng.latitude
+                            pickedLng = poi.latLng.longitude
+                            pickedAddress = poi.name
+                        },
                         uiSettings = MapUiSettings(
                             zoomControlsEnabled = true,
-                            myLocationButtonEnabled = true
+                            myLocationButtonEnabled = hasLocationPermission
                         )
                     ) {
                         Marker(

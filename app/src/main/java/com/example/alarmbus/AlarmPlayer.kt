@@ -3,6 +3,7 @@ package com.example.alarmbus
 import android.content.Context
 import android.content.Intent
 import android.media.AudioAttributes
+import android.media.AudioDeviceInfo
 import android.media.AudioManager
 import android.media.MediaPlayer
 import android.media.RingtoneManager
@@ -17,15 +18,30 @@ import kotlin.math.roundToInt
 
 /**
  * Gerenciador singleton para reprodução do som do alarme, vibração, controle de volume
- * e restauração do volume original após desativação.
+ * e roteamento inteligente (Fone Bluetooth vs Alto-falante do Celular).
  */
 object AlarmPlayer {
     private var mediaPlayer: MediaPlayer? = null
     private var vibrator: Vibrator? = null
     private var previousVolume: Int = -1
+    private var activeStreamType: Int = AudioManager.STREAM_ALARM
     private var ringing: Boolean = false
 
     fun isRinging(): Boolean = ringing
+
+    private fun isBluetoothConnected(audioManager: AudioManager): Boolean {
+        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            val devices = audioManager.getDevices(AudioManager.GET_DEVICES_OUTPUTS)
+            devices.any { device ->
+                device.type == AudioDeviceInfo.TYPE_BLUETOOTH_A2DP ||
+                device.type == AudioDeviceInfo.TYPE_BLUETOOTH_SCO ||
+                device.type == AudioDeviceInfo.TYPE_BLE_HEADSET
+            }
+        } else {
+            @Suppress("DEPRECATION")
+            audioManager.isBluetoothA2dpOn || audioManager.isBluetoothScoOn
+        }
+    }
 
     fun startAlarm(
         context: Context,
@@ -37,21 +53,28 @@ object AlarmPlayer {
         ringing = true
 
         val audioManager = context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
+        val hasBluetooth = isBluetoothConnected(audioManager)
 
-        // 1. Salva o volume original do fluxo de ALARME do dispositivo
-        val maxVol = audioManager.getStreamMaxVolume(AudioManager.STREAM_ALARM)
-        previousVolume = audioManager.getStreamVolume(AudioManager.STREAM_ALARM)
+        // Se houver fone Bluetooth conectado, o som sai EXCLUSIVAMENTE pelo fone (STREAM_MUSIC / USAGE_MEDIA)
+        // Caso contrário, sai pelo alto-falante do celular (STREAM_ALARM / USAGE_ALARM)
+        activeStreamType = if (hasBluetooth) AudioManager.STREAM_MUSIC else AudioManager.STREAM_ALARM
+        val audioUsage = if (hasBluetooth) AudioAttributes.USAGE_MEDIA else AudioAttributes.USAGE_ALARM
+        val contentType = if (hasBluetooth) AudioAttributes.CONTENT_TYPE_MUSIC else AudioAttributes.CONTENT_TYPE_SONIFICATION
+
+        // 1. Salva o volume original do fluxo ativo do dispositivo
+        val maxVol = audioManager.getStreamMaxVolume(activeStreamType)
+        previousVolume = audioManager.getStreamVolume(activeStreamType)
 
         // 2. Ajusta o volume com base na porcentagem selecionada na barra (0 a 100%)
         val targetVol = (maxVol * (volumeLevelPercent / 100f)).roundToInt().coerceIn(0, maxVol)
 
         try {
-            audioManager.setStreamVolume(AudioManager.STREAM_ALARM, targetVol, 0)
+            audioManager.setStreamVolume(activeStreamType, targetVol, 0)
         } catch (e: Exception) {
             Log.e("AlarmPlayer", "Erro ao ajustar volume", e)
         }
 
-        // 3. Toca o som em loop usando MediaPlayer
+        // 3. Toca o som em loop usando MediaPlayer direcionado ao canal ativo
         try {
             val soundUri = ringtoneUri
                 ?: RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM)
@@ -61,8 +84,8 @@ object AlarmPlayer {
             player.setDataSource(context, soundUri)
             player.setAudioAttributes(
                 AudioAttributes.Builder()
-                    .setUsage(AudioAttributes.USAGE_ALARM)
-                    .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+                    .setUsage(audioUsage)
+                    .setContentType(contentType)
                     .build()
             )
             player.isLooping = true
@@ -149,11 +172,11 @@ object AlarmPlayer {
             vibrator = null
         }
 
-        // Restaura o volume original que estava configurado no dispositivo antes do alarme
+        // Restaura o volume original do fluxo ativo que estava configurado no dispositivo antes do alarme
         if (previousVolume != -1) {
             try {
                 val audioManager = context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
-                audioManager.setStreamVolume(AudioManager.STREAM_ALARM, previousVolume, 0)
+                audioManager.setStreamVolume(activeStreamType, previousVolume, 0)
             } catch (e: Exception) {
                 Log.e("AlarmPlayer", "Erro ao restaurar volume original", e)
             } finally {
