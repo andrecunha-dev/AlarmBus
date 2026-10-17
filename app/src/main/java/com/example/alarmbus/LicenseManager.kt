@@ -16,6 +16,7 @@ object LicenseManager {
     private const val KEY_EXPIRATION_TIME = "license_expiration_time"
     private const val KEY_PROMO_PRICE = "admin_promo_price"
     private const val KEY_PROMO_DAYS = "admin_promo_days"
+    private const val KEY_IS_ADMIN = "is_developer_admin"
 
     // Credenciais de Administrador Desenvolvedor
     const val ADMIN_NAME = "Andre3097"
@@ -31,6 +32,16 @@ object LicenseManager {
     fun isAdminUser(name: String, cpf: String): Boolean {
         val cleanCpf = cpf.replace("[^0-9]".toRegex(), "")
         return name.trim().equals(ADMIN_NAME, ignoreCase = true) && cleanCpf == ADMIN_CPF
+    }
+
+    fun setDeveloperAdmin(context: Context, isAdmin: Boolean) {
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit().putBoolean(KEY_IS_ADMIN, isAdmin).apply()
+    }
+
+    fun isDeveloperAdmin(context: Context): Boolean {
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        return prefs.getBoolean(KEY_IS_ADMIN, false)
     }
 
     fun getPromoPrice(context: Context): Double {
@@ -77,7 +88,10 @@ object LicenseManager {
     fun grantDeveloperLifetimeLicense(context: Context) {
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
         val hundredYearsMillis = System.currentTimeMillis() + (100L * 365 * 24 * 60 * 60 * 1000)
-        prefs.edit().putLong(KEY_EXPIRATION_TIME, hundredYearsMillis).apply()
+        prefs.edit()
+            .putLong(KEY_EXPIRATION_TIME, hundredYearsMillis)
+            .putBoolean(KEY_IS_ADMIN, true)
+            .apply()
     }
 
     data class PixPaymentResult(

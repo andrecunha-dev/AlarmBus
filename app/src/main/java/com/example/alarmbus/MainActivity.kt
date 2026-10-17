@@ -59,6 +59,7 @@ import androidx.compose.material.icons.filled.NotificationsActive
 import androidx.compose.material.icons.filled.Place
 import androidx.compose.material.icons.filled.RadioButtonUnchecked
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Timer
 import androidx.compose.material.icons.filled.Vibration
 import androidx.compose.material.icons.filled.VolumeUp
@@ -560,6 +561,20 @@ class MainActivity : ComponentActivity() {
                                 )
                             }
                         }
+                        // Botão de Configurações do Desenvolvedor Admin
+                        if (LicenseManager.isDeveloperAdmin(context)) {
+                            IconButton(
+                                onClick = { showAdminPanelDialog = true },
+                                modifier = Modifier.size(32.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Settings,
+                                    contentDescription = "Painel Admin Desenvolvedor",
+                                    tint = purpleColor,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                            }
+                        }
                         // Botão ENTER / CONFIRMAR BUSCA no campo de texto
                         IconButton(
                             onClick = {
@@ -1032,41 +1047,41 @@ class MainActivity : ComponentActivity() {
                     }
                 }
 
-                // Status da Assinatura Mensal (Asaas Pix)
+                // Status da Assinatura Mensal (Exibido apenas quando desativada)
                 val isSubscribed = LicenseManager.isLicenseActive(context)
-                val daysRemaining = LicenseManager.getExpirationDaysRemaining(context)
                 val promoPrice = LicenseManager.getPromoPrice(context)
                 val promoDays = LicenseManager.getPromoDays(context)
                 val formattedPrice = String.format(java.util.Locale.getDefault(), "R$ %.2f", promoPrice)
 
-                Surface(
-                    shape = RoundedCornerShape(10.dp),
-                    color = if (isSubscribed) Color(0xFFE8F5E9) else Color(0xFFFFF3E0),
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clickable { showSubscriptionDialog = true }
-                ) {
-                    Row(
-                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween
+                if (!isSubscribed) {
+                    Surface(
+                        shape = RoundedCornerShape(10.dp),
+                        color = Color(0xFFFFF3E0),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { showSubscriptionDialog = true }
                     ) {
-                        Text(
-                            text = if (isSubscribed) " Assinatura Ativa ($daysRemaining dias restantes)" else " Assinatura desativada - toque para Ativar ($formattedPrice válido por $promoDays dias)",
-                            fontSize = 11.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = if (isSubscribed) Color(0xFF2E7D32) else Color(0xFFE65100)
-                        )
-                        Text(
-                            text = "ASSINAR",
-                            fontSize = 11.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = purpleColor
-                        )
+                        Row(
+                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Text(
+                                text = " Assinatura desativada - toque para Ativar ($formattedPrice válido por $promoDays dias)",
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = Color(0xFFE65100)
+                            )
+                            Text(
+                                text = "ASSINAR",
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = purpleColor
+                            )
+                        }
                     }
+                    Spacer(modifier = Modifier.height(10.dp))
                 }
-
-                Spacer(modifier = Modifier.height(10.dp))
 
                 // 10. Botão "Ativar alerta" / "Desativar alerta"
                 Button(
