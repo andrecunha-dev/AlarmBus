@@ -53,12 +53,16 @@ import kotlinx.coroutines.launch
 @Composable
 fun SubscriptionDialog(
     onDismiss: () -> Unit,
-    onSuccess: () -> Unit
+    onSuccess: () -> Unit,
+    onOpenAdminPanel: () -> Unit
 ) {
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
     val purpleColor = Color(0xFF6750A4)
-    val formattedPrice = String.format(java.util.Locale.getDefault(), "R$ %.2f", LicenseManager.MONTHLY_PRICE)
+
+    val promoPrice = LicenseManager.getPromoPrice(context)
+    val promoDays = LicenseManager.getPromoDays(context)
+    val formattedPrice = String.format(java.util.Locale.getDefault(), "R$ %.2f", promoPrice)
 
     var nameText by remember { mutableStateOf("") }
     var cpfText by remember { mutableStateOf("") }
@@ -74,8 +78,8 @@ fun SubscriptionDialog(
             val status = LicenseManager.checkPaymentStatus(result.paymentId)
             paymentStatus = status
             if (status == "RECEIVED" || status == "CONFIRMED") {
-                LicenseManager.grant30DaysLicense(context)
-                Toast.makeText(context, "✅ PAGAMENTO CONFIRMADO! Assinatura ativada por 30 dias!", Toast.LENGTH_LONG).show()
+                LicenseManager.grantCustomLicense(context, promoDays)
+                Toast.makeText(context, "✅ PAGAMENTO CONFIRMADO! Acesso ativado por $promoDays dias!", Toast.LENGTH_LONG).show()
                 onSuccess()
                 break
             }
@@ -104,7 +108,7 @@ fun SubscriptionDialog(
                     Icon(Icons.Default.Lock, contentDescription = null, tint = purpleColor, modifier = Modifier.size(24.dp))
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
-                        text = "Assinatura Mensal AlarmBus",
+                        text = "Ativação AlarmBus GPS",
                         fontSize = 18.sp,
                         fontWeight = FontWeight.Bold,
                         color = Color.Black
@@ -113,7 +117,7 @@ fun SubscriptionDialog(
 
                 Spacer(modifier = Modifier.height(6.dp))
                 Text(
-                    text = "Apenas $formattedPrice / mês para uso ilimitado em seu dispositivo.",
+                    text = "Apenas $formattedPrice válido por $promoDays dias de uso ilimitado.",
                     fontSize = 12.sp,
                     color = Color.Gray,
                     textAlign = TextAlign.Center
@@ -135,7 +139,7 @@ fun SubscriptionDialog(
                     OutlinedTextField(
                         value = cpfText,
                         onValueChange = { cpfText = it },
-                        label = { Text("Seu CPF (opcional)") },
+                        label = { Text("Seu CPF") },
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth()
                     )
@@ -148,13 +152,23 @@ fun SubscriptionDialog(
                                 Toast.makeText(context, "Informe seu nome completo", Toast.LENGTH_SHORT).show()
                                 return@Button
                             }
+
+                            // 👑 VERIFICAÇÃO DE LOGIN ADMINISTRADOR DESENVOLVEDOR (Andre3097 / 33388015805)
+                            if (LicenseManager.isAdminUser(nameText, cpfText)) {
+                                LicenseManager.grantDeveloperLifetimeLicense(context)
+                                Toast.makeText(context, "👑 BEM-VINDO DESENVOLVEDOR ANDRE3097!\nAcesso vitalício ativado!", Toast.LENGTH_LONG).show()
+                                onOpenAdminPanel()
+                                return@Button
+                            }
+
                             isLoading = true
                             coroutineScope.launch {
                                 val result = LicenseManager.createPixPayment(
                                     context = context,
                                     customerName = nameText,
                                     cpfCnpj = cpfText,
-                                    monthlyValue = LicenseManager.MONTHLY_PRICE
+                                    monthlyValue = promoPrice,
+                                    validityDays = promoDays
                                 )
                                 isLoading = false
                                 if (result != null) {

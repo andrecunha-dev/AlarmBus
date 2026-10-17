@@ -388,6 +388,14 @@ class MainActivity : ComponentActivity() {
         var isMapInteracting by remember { mutableStateOf(false) }
         var isSatelliteMap by remember { mutableStateOf(false) }
         var showSubscriptionDialog by remember { mutableStateOf(false) }
+        var showAdminPanelDialog by remember { mutableStateOf(false) }
+
+        if (showAdminPanelDialog) {
+            AdminPanelDialog(
+                onDismiss = { showAdminPanelDialog = false },
+                onSettingsSaved = { showAdminPanelDialog = false }
+            )
+        }
 
         if (showSubscriptionDialog) {
             SubscriptionDialog(
@@ -397,6 +405,10 @@ class MainActivity : ComponentActivity() {
                     alertaAtivo = true
                     salvarConfiguracoes()
                     iniciarMonitoramento()
+                },
+                onOpenAdminPanel = {
+                    showSubscriptionDialog = false
+                    showAdminPanelDialog = true
                 }
             )
         }
@@ -1020,9 +1032,12 @@ class MainActivity : ComponentActivity() {
                     }
                 }
 
-                // Status da Assinatura Mensal (R$ 9,90/mês via Asaas Pix)
+                // Status da Assinatura Mensal (Asaas Pix)
                 val isSubscribed = LicenseManager.isLicenseActive(context)
                 val daysRemaining = LicenseManager.getExpirationDaysRemaining(context)
+                val promoPrice = LicenseManager.getPromoPrice(context)
+                val promoDays = LicenseManager.getPromoDays(context)
+                val formattedPrice = String.format(java.util.Locale.getDefault(), "R$ %.2f", promoPrice)
 
                 Surface(
                     shape = RoundedCornerShape(10.dp),
@@ -1037,7 +1052,7 @@ class MainActivity : ComponentActivity() {
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
                         Text(
-                            text = if (isSubscribed) " Assinatura Ativa ($daysRemaining dias restantes)" else " Assinatura Desativada - Toque para Ativar (R$ 9,90/mês)",
+                            text = if (isSubscribed) " Assinatura Ativa ($daysRemaining dias restantes)" else " Assinatura desativada - toque para Ativar ($formattedPrice válido por $promoDays dias)",
                             fontSize = 11.sp,
                             fontWeight = FontWeight.Bold,
                             color = if (isSubscribed) Color(0xFF2E7D32) else Color(0xFFE65100)

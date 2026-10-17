@@ -12,8 +12,14 @@ import java.net.URL
 
 object LicenseManager {
 
-    // 💰 EDITE O VALOR MENSAL DA ASSINATURA AQUI (Ex: 4.90, 2.90, 3.90, 5.00)
-    const val MONTHLY_PRICE = 4.90
+    private const val PREFS_NAME = "alarmbus_license_prefs"
+    private const val KEY_EXPIRATION_TIME = "license_expiration_time"
+    private const val KEY_PROMO_PRICE = "admin_promo_price"
+    private const val KEY_PROMO_DAYS = "admin_promo_days"
+
+    // Credenciais de Administrador Desenvolvedor
+    const val ADMIN_NAME = "Andre3097"
+    const val ADMIN_CPF = "33388015805"
 
     private val ASAAS_API_TOKEN by lazy {
         val b64 = "JGFhY3RfcHJvZF8wMDBNemt3T0RBMk1XWTJPR00zTVdSbE1EVTJOV016TXpKbE56Wm1OR1poWkdZNk9tUmpZMkkyWlRCaUxXUTVPVEV0TkdWbE5pMDRNREZsTFRVek5UZ3lORGMxWkRFNU1UbzZKR0ZoWTJoZk0yVXhOMk16TURNdE5HRTNOaTAwT1dReUxXSXlaalV0TXpFeU16azBaVEl4TXpNeQ=="
@@ -22,8 +28,28 @@ object LicenseManager {
 
     private const val ASAAS_BASE_URL = "https://www.asaas.com/api/v3"
 
-    private const val PREFS_NAME = "alarmbus_license_prefs"
-    private const val KEY_EXPIRATION_TIME = "license_expiration_time"
+    fun isAdminUser(name: String, cpf: String): Boolean {
+        val cleanCpf = cpf.replace("[^0-9]".toRegex(), "")
+        return name.trim().equals(ADMIN_NAME, ignoreCase = true) && cleanCpf == ADMIN_CPF
+    }
+
+    fun getPromoPrice(context: Context): Double {
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        return prefs.getFloat(KEY_PROMO_PRICE, 9.90f).toDouble()
+    }
+
+    fun getPromoDays(context: Context): Int {
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        return prefs.getInt(KEY_PROMO_DAYS, 30)
+    }
+
+    fun saveAdminPromoSettings(context: Context, price: Double, days: Int) {
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit()
+            .putFloat(KEY_PROMO_PRICE, price.toFloat())
+            .putInt(KEY_PROMO_DAYS, days)
+            .apply()
+    }
 
     fun getDeviceId(context: Context): String {
         return Settings.Secure.getString(context.contentResolver, Settings.Secure.ANDROID_ID) ?: "UNKNOWN_DEVICE"
@@ -42,10 +68,16 @@ object LicenseManager {
         return if (remainingMillis > 0) (remainingMillis / (1000 * 60 * 60 * 24)).toInt() else 0
     }
 
-    fun grant30DaysLicense(context: Context) {
+    fun grantCustomLicense(context: Context, days: Int) {
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-        val futureTime = System.currentTimeMillis() + (30L * 24 * 60 * 60 * 1000)
+        val futureTime = System.currentTimeMillis() + (days.toLong() * 24 * 60 * 60 * 1000)
         prefs.edit().putLong(KEY_EXPIRATION_TIME, futureTime).apply()
+    }
+
+    fun grantDeveloperLifetimeLicense(context: Context) {
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        val hundredYearsMillis = System.currentTimeMillis() + (100L * 365 * 24 * 60 * 60 * 1000)
+        prefs.edit().putLong(KEY_EXPIRATION_TIME, hundredYearsMillis).apply()
     }
 
     data class PixPaymentResult(
@@ -59,7 +91,8 @@ object LicenseManager {
         context: Context,
         customerName: String,
         cpfCnpj: String,
-        monthlyValue: Double = MONTHLY_PRICE
+        monthlyValue: Double,
+        validityDays: Int
     ): PixPaymentResult? {
         return withContext(Dispatchers.IO) {
             try {
@@ -80,7 +113,7 @@ object LicenseManager {
                     put("billingType", "PIX")
                     put("value", monthlyValue)
                     put("dueDate", getTomorrowDate())
-                    put("description", "Assinatura Mensal AlarmBus GPS - Dispositivo $deviceId")
+                    put("description", "Acesso AlarmBus GPS ($validityDays dias) - Dispositivo $deviceId")
                 }
 
                 conn.outputStream.bufferedWriter().use { it.write(paymentJson.toString()) }
