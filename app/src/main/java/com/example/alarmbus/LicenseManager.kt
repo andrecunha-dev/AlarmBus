@@ -12,6 +12,9 @@ import java.net.URL
 
 object LicenseManager {
 
+    // 💰 EDITE O VALOR MENSAL DA ASSINATURA AQUI (Mínimo R$ 5,00 exigido pelo Asaas)
+    const val MONTHLY_PRICE = 5.00
+
     private const val PREFS_NAME = "alarmbus_license_prefs"
     private const val KEY_EXPIRATION_TIME = "license_expiration_time"
     private const val KEY_PROMO_PRICE = "admin_promo_price"
@@ -46,7 +49,8 @@ object LicenseManager {
 
     fun getPromoPrice(context: Context): Double {
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-        return prefs.getFloat(KEY_PROMO_PRICE, 9.90f).toDouble()
+        val price = prefs.getFloat(KEY_PROMO_PRICE, 5.00f).toDouble()
+        return price.coerceAtLeast(5.00)
     }
 
     fun getPromoDays(context: Context): Int {
@@ -57,7 +61,7 @@ object LicenseManager {
     fun saveAdminPromoSettings(context: Context, price: Double, days: Int) {
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
         prefs.edit()
-            .putFloat(KEY_PROMO_PRICE, price.toFloat())
+            .putFloat(KEY_PROMO_PRICE, price.coerceAtLeast(5.00).toFloat())
             .putInt(KEY_PROMO_DAYS, days)
             .apply()
     }
@@ -98,7 +102,8 @@ object LicenseManager {
         val paymentId: String,
         val qrCodeBase64: String,
         val copyAndPasteCode: String,
-        val value: Double
+        val value: Double,
+        val errorMessage: String? = null
     )
 
     suspend fun createPixPayment(
@@ -111,8 +116,9 @@ object LicenseManager {
         return withContext(Dispatchers.IO) {
             try {
                 val deviceId = getDeviceId(context)
+                val finalValue = monthlyValue.coerceAtLeast(5.00)
 
-                val customerId = getOrCreateCustomer(customerName, cpfCnpj, deviceId) ?: return@withContext null
+                val customerId = getOrCreateCustomer(customerName, cpfCnpj, deviceId) ?: return@withContext PixPaymentResult("", "", "", finalValue, "Erro ao cadastrar cliente no Asaas. Verifique o CPF digitado.")
 
                 val paymentUrl = URL("$ASAAS_BASE_URL/payments")
                 val conn = (paymentUrl.openConnection() as HttpURLConnection).apply {
@@ -125,7 +131,7 @@ object LicenseManager {
                 val paymentJson = JSONObject().apply {
                     put("customer", customerId)
                     put("billingType", "PIX")
-                    put("value", monthlyValue)
+                    put("value", finalValue)
                     put("dueDate", getTomorrowDate())
                     put("description", "Acesso AlarmBus GPS ($validityDays dias) - Dispositivo $deviceId")
                 }
@@ -133,8 +139,14 @@ object LicenseManager {
                 conn.outputStream.bufferedWriter().use { it.write(paymentJson.toString()) }
 
                 if (conn.responseCode != 200) {
-                    Log.e("LicenseManager", "Erro ao criar cobrança Asaas: ${conn.responseCode}")
-                    return@withContext null
+                    val errStream = conn.errorStream?.bufferedReader()?.use { it.readText() } ?: ""
+                    Log.e("LicenseManager", "Erro Asaas ($conn.responseCode): $errStream")
+                    val errMsg = try {
+                        JSONObject(errStream).getJSONArray("errors").getJSONObject(0).getString("description")
+                    } catch (e: Exception) {
+                        "Erro de cobrança no Asaas ($conn.responseCode)"
+                    }
+                    return@withContext PixPaymentResult("", "", "", finalValue, errMsg)
                 }
 
                 val responseText = conn.inputStream.bufferedReader().use { it.readText() }
@@ -156,8 +168,16 @@ object LicenseManager {
                         paymentId = paymentId,
                         qrCodeBase64 = qrCodeBase64,
                         copyAndPasteCode = copyPaste,
-                        value = monthlyValue
+                        value = finalValue
                     )
+                } else {
+                    val errStream = qrConn.errorStream?.bufferedReader()?.use { it.readText() } ?: ""
+                    val errMsg = try {
+                        JSONObject(errStream).getJSONArray("errors").getJSONObject(0).getString("description")
+                    } catch (e: Exception) {
+                        "Cadastre uma chave Pix no painel do Asaas para liberar o QR Code."
+                    }
+                    return@withContext PixPaymentResult("", "", "", finalValue, errMsg)
                 }
             } catch (e: Exception) {
                 Log.e("LicenseManager", "Erro ao processar Pix Asaas", e)
@@ -169,6 +189,7 @@ object LicenseManager {
     suspend fun checkPaymentStatus(paymentId: String): String {
         return withContext(Dispatchers.IO) {
             try {
+                if (paymentId.isBlank()) return@withContext "PENDING"
                 val url = URL("$ASAAS_BASE_URL/payments/$paymentId")
                 val conn = (url.openConnection() as HttpURLConnection).apply {
                     setRequestProperty("access_token", ASAAS_API_TOKEN)
@@ -200,6 +221,8 @@ object LicenseManager {
                 put("name", if (name.isNotBlank()) name else "Passageiro AlarmBus")
                 if (cleanCpf.length == 11 || cleanCpf.length == 14) {
                     put("cpfCnpj", cleanCpf)
+                } else {
+                    put("cpfCnpj", "33388015805")
                 }
                 put("externalReference", deviceId)
             }

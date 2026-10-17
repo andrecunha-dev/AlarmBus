@@ -171,11 +171,12 @@ fun SubscriptionDialog(
                                     validityDays = promoDays
                                 )
                                 isLoading = false
-                                if (result != null) {
+                                if (result != null && result.errorMessage.isNullOrBlank() && result.paymentId.isNotBlank()) {
                                     pixResult = result
                                     paymentStatus = "Aguardando pagamento do Pix..."
                                 } else {
-                                    Toast.makeText(context, "Erro ao gerar Pix no Asaas. Tente novamente.", Toast.LENGTH_LONG).show()
+                                    val msg = result?.errorMessage ?: "Erro ao gerar Pix no Asaas."
+                                    Toast.makeText(context, msg, Toast.LENGTH_LONG).show()
                                 }
                             }
                         },

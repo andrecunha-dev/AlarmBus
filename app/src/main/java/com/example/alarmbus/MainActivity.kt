@@ -562,18 +562,22 @@ class MainActivity : ComponentActivity() {
                             }
                         }
                         // Botão de Configurações do Desenvolvedor Admin
-                        if (LicenseManager.isDeveloperAdmin(context)) {
-                            IconButton(
-                                onClick = { showAdminPanelDialog = true },
-                                modifier = Modifier.size(32.dp)
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.Settings,
-                                    contentDescription = "Painel Admin Desenvolvedor",
-                                    tint = purpleColor,
-                                    modifier = Modifier.size(20.dp)
-                                )
-                            }
+                        IconButton(
+                            onClick = {
+                                if (LicenseManager.isDeveloperAdmin(context)) {
+                                    showAdminPanelDialog = true
+                                } else {
+                                    showSubscriptionDialog = true
+                                }
+                            },
+                            modifier = Modifier.size(32.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Settings,
+                                contentDescription = "Painel Admin Desenvolvedor",
+                                tint = purpleColor,
+                                modifier = Modifier.size(20.dp)
+                            )
                         }
                         // Botão ENTER / CONFIRMAR BUSCA no campo de texto
                         IconButton(
