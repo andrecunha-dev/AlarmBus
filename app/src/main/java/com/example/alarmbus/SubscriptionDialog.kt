@@ -58,6 +58,7 @@ fun SubscriptionDialog(
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
     val purpleColor = Color(0xFF6750A4)
+    val formattedPrice = String.format(java.util.Locale.getDefault(), "R$ %.2f", LicenseManager.MONTHLY_PRICE)
 
     var nameText by remember { mutableStateOf("") }
     var cpfText by remember { mutableStateOf("") }
@@ -112,7 +113,7 @@ fun SubscriptionDialog(
 
                 Spacer(modifier = Modifier.height(6.dp))
                 Text(
-                    text = "Apenas R$ 9,90 / mês para uso ilimitado em seu dispositivo.",
+                    text = "Apenas $formattedPrice / mês para uso ilimitado em seu dispositivo.",
                     fontSize = 12.sp,
                     color = Color.Gray,
                     textAlign = TextAlign.Center
@@ -153,7 +154,7 @@ fun SubscriptionDialog(
                                     context = context,
                                     customerName = nameText,
                                     cpfCnpj = cpfText,
-                                    monthlyValue = 9.90
+                                    monthlyValue = LicenseManager.MONTHLY_PRICE
                                 )
                                 isLoading = false
                                 if (result != null) {
@@ -177,7 +178,7 @@ fun SubscriptionDialog(
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Icon(Icons.Default.QrCode, contentDescription = null, modifier = Modifier.size(20.dp))
                                 Spacer(modifier = Modifier.width(8.dp))
-                                Text("GERAR PIX DE R$ 9,90", fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                                Text("GERAR PIX DE $formattedPrice", fontWeight = FontWeight.Bold, fontSize = 14.sp)
                             }
                         }
                     }

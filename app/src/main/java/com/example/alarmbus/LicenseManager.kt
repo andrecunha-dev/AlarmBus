@@ -12,8 +12,11 @@ import java.net.URL
 
 object LicenseManager {
 
+    // 💰 EDITE O VALOR MENSAL DA ASSINATURA AQUI (Ex: 4.90, 2.90, 3.90, 5.00)
+    const val MONTHLY_PRICE = 4.90
+
     private val ASAAS_API_TOKEN by lazy {
-        val b64 = "JGFhY3RfcHJvZF8wMDBNemt3T0RBMk1XWTJPR00zTVdSbE1EVTJOV00zTXpKbE56Wm1OR1poWkdZNk9tUmpZMkkyWlRCaUxXUTVPVEV0TkdWbE5pMDRNREZsTFRVek5UZ3lORGMxWkRFNU1UbzZKR0ZoWTJoZk0yVXhOMk16TURNdE5HRTNOaTAwT1dReUxXSXlaalV0TXpFeU16azBaVEl4TXpNeQ=="
+        val b64 = "JGFhY3RfcHJvZF8wMDBNemt3T0RBMk1XWTJPR00zTVdSbE1EVTJOV016TXpKbE56Wm1OR1poWkdZNk9tUmpZMkkyWlRCaUxXUTVPVEV0TkdWbE5pMDRNREZsTFRVek5UZ3lORGMxWkRFNU1UbzZKR0ZoWTJoZk0yVXhOMk16TURNdE5HRTNOaTAwT1dReUxXSXlaalV0TXpFeU16azBaVEl4TXpNeQ=="
         String(Base64.decode(b64, Base64.DEFAULT), Charsets.UTF_8).trim()
     }
 
@@ -56,16 +59,14 @@ object LicenseManager {
         context: Context,
         customerName: String,
         cpfCnpj: String,
-        monthlyValue: Double = 9.90
+        monthlyValue: Double = MONTHLY_PRICE
     ): PixPaymentResult? {
         return withContext(Dispatchers.IO) {
             try {
                 val deviceId = getDeviceId(context)
 
-                // 1. Cria ou Obtém o Cliente no Asaas
                 val customerId = getOrCreateCustomer(customerName, cpfCnpj, deviceId) ?: return@withContext null
 
-                // 2. Cria a Cobrança por Pix no Asaas
                 val paymentUrl = URL("$ASAAS_BASE_URL/payments")
                 val conn = (paymentUrl.openConnection() as HttpURLConnection).apply {
                     requestMethod = "POST"
@@ -93,7 +94,6 @@ object LicenseManager {
                 val paymentObj = JSONObject(responseText)
                 val paymentId = paymentObj.getString("id")
 
-                // 3. Obtém o QR Code do Pix gerado
                 val qrCodeUrl = URL("$ASAAS_BASE_URL/payments/$paymentId/pixQrCode")
                 val qrConn = (qrCodeUrl.openConnection() as HttpURLConnection).apply {
                     setRequestProperty("access_token", ASAAS_API_TOKEN)
