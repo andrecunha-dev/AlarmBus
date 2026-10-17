@@ -387,6 +387,19 @@ class MainActivity : ComponentActivity() {
 
         var isMapInteracting by remember { mutableStateOf(false) }
         var isSatelliteMap by remember { mutableStateOf(false) }
+        var showSubscriptionDialog by remember { mutableStateOf(false) }
+
+        if (showSubscriptionDialog) {
+            SubscriptionDialog(
+                onDismiss = { showSubscriptionDialog = false },
+                onSuccess = {
+                    showSubscriptionDialog = false
+                    alertaAtivo = true
+                    salvarConfiguracoes()
+                    iniciarMonitoramento()
+                }
+            )
+        }
 
         if (showMapPicker) {
             MapPickerDialog(
@@ -1007,13 +1020,50 @@ class MainActivity : ComponentActivity() {
                     }
                 }
 
-                Spacer(modifier = Modifier.height(18.dp))
+                // Status da Assinatura Mensal (R$ 9,90/mês via Asaas Pix)
+                val isSubscribed = LicenseManager.isLicenseActive(context)
+                val daysRemaining = LicenseManager.getExpirationDaysRemaining(context)
+
+                Surface(
+                    shape = RoundedCornerShape(10.dp),
+                    color = if (isSubscribed) Color(0xFFE8F5E9) else Color(0xFFFFF3E0),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { showSubscriptionDialog = true }
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text(
+                            text = if (isSubscribed) " Assinatura Ativa ($daysRemaining dias restantes)" else " Assinatura Desativada - Toque para Ativar (R$ 9,90/mês)",
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = if (isSubscribed) Color(0xFF2E7D32) else Color(0xFFE65100)
+                        )
+                        Text(
+                            text = "ASSINAR",
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = purpleColor
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(10.dp))
 
                 // 10. Botão "Ativar alerta" / "Desativar alerta"
                 Button(
                     onClick = {
                         if (destinoLatitude == 0.0 || destinoLongitude == 0.0) {
                             Toast.makeText(context, "Busque e confirme um destino primeiro", Toast.LENGTH_SHORT).show()
+                            return@Button
+                        }
+
+                        // Verifica a licença mensal (Asaas Pix)
+                        if (!alertaAtivo && !LicenseManager.isLicenseActive(context)) {
+                            showSubscriptionDialog = true
                             return@Button
                         }
 
