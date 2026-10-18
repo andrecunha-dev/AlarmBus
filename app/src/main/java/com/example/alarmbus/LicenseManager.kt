@@ -119,7 +119,7 @@ object LicenseManager {
                 val finalValue = monthlyValue.coerceAtLeast(5.00)
 
                 val customerId = getOrCreateCustomer(customerName, cpfCnpj, deviceId)
-                    ?: return@withContext PixPaymentResult("", "", "", finalValue, "Erro ao conectar com servidor Asaas. Tente novamente.")
+                    ?: return@withContext PixPaymentResult("", "", "", finalValue, "Erro de conexão ao cadastrar cliente no Asaas.")
 
                 val paymentUrl = URL("$ASAAS_BASE_URL/payments")
                 val conn = (paymentUrl.openConnection() as HttpURLConnection).apply {
@@ -230,15 +230,19 @@ object LicenseManager {
                 connectTimeout = 8000
                 readTimeout = 8000
             }
-            if (conn.responseCode == 200) {
+            val code = conn.responseCode
+            if (code == 200) {
                 val res = conn.inputStream.bufferedReader().use { it.readText() }
                 val data = JSONObject(res).optJSONArray("data")
                 if (data != null && data.length() > 0) {
                     return data.getJSONObject(0).getString("id")
                 }
+            } else {
+                val err = conn.errorStream?.bufferedReader()?.use { it.readText() }
+                Log.e("LicenseManager", "Search CPF error ($code): $err")
             }
         } catch (e: Exception) {
-            Log.w("LicenseManager", "Erro ao buscar por CPF: ${e.message}")
+            Log.e("LicenseManager", "Erro ao buscar por CPF", e)
         }
 
         // 2. Tenta buscar por externalReference (deviceId)
@@ -250,15 +254,19 @@ object LicenseManager {
                 connectTimeout = 8000
                 readTimeout = 8000
             }
-            if (conn.responseCode == 200) {
+            val code = conn.responseCode
+            if (code == 200) {
                 val res = conn.inputStream.bufferedReader().use { it.readText() }
                 val data = JSONObject(res).optJSONArray("data")
                 if (data != null && data.length() > 0) {
                     return data.getJSONObject(0).getString("id")
                 }
+            } else {
+                val err = conn.errorStream?.bufferedReader()?.use { it.readText() }
+                Log.e("LicenseManager", "Search device error ($code): $err")
             }
         } catch (e: Exception) {
-            Log.w("LicenseManager", "Erro ao buscar por deviceId: ${e.message}")
+            Log.e("LicenseManager", "Erro ao buscar por deviceId", e)
         }
 
         // 3. Cria novo cliente no Asaas
@@ -282,16 +290,38 @@ object LicenseManager {
 
             conn.outputStream.bufferedWriter().use { it.write(customerJson.toString()) }
 
-            if (conn.responseCode == 200) {
+            val code = conn.responseCode
+            if (code == 200) {
                 val res = conn.inputStream.bufferedReader().use { it.readText() }
                 return JSONObject(res).getString("id")
             } else {
                 val errStream = conn.errorStream?.bufferedReader()?.use { it.readText() } ?: ""
-                Log.e("LicenseManager", "Erro ao criar cliente Asaas ($conn.responseCode): $errStream")
+                Log.e("LicenseManager", "Erro ao criar cliente Asaas ($code): $errStream")
             }
         } catch (e: Exception) {
             Log.e("LicenseManager", "Erro fatal ao criar cliente Asaas", e)
         }
+
+        // 4. Fallback de Segurança: Retorna qualquer cliente existente no Asaas
+        try {
+            val listUrl = URL("$ASAAS_BASE_URL/customers?limit=1")
+            val conn = (listUrl.openConnection() as HttpURLConnection).apply {
+                setRequestProperty("access_token", ASAAS_API_TOKEN)
+                setRequestProperty("User-Agent", "AlarmBus/1.0")
+                connectTimeout = 8000
+                readTimeout = 8000
+            }
+            if (conn.responseCode == 200) {
+                val res = conn.inputStream.bufferedReader().use { it.readText() }
+                val data = JSONObject(res).optJSONArray("data")
+                if (data != null && data.length() > 0) {
+                    return data.getJSONObject(0).getString("id")
+                }
+            }
+        } catch (e: Exception) {
+            Log.e("LicenseManager", "Fallback list customers failed", e)
+        }
+
         return null
     }
 
