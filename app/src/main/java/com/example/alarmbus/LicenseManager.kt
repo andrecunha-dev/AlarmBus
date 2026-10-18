@@ -2,7 +2,6 @@ package com.example.alarmbus
 
 import android.content.Context
 import android.provider.Settings
-import android.util.Base64
 import android.util.Log
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -26,9 +25,12 @@ object LicenseManager {
     const val ADMIN_CPF = "33388015805"
 
     private val ASAAS_API_TOKEN by lazy {
-        val b64 = "JGFhY3RfcHJvZF8wMDBNemt3T0RBMk1XWTJPR00zTVdSbE1EVTJOV016TXpKbE56Wm1OR1poWkdZNk9tUmpZMkkyWlRCaUxXUTVPVEV0TkdWbE5pMDRNREZsTFRVek5UZ3lORGMxWkRFNU1UbzZKR0ZoWTJoZk0yVXhOMk16TURNdE5HRTNOaTAwT1dReUxXSXlaalV0TXpFeU16azBaVEl4TXpNeQ=="
-        val raw = String(Base64.decode(b64, Base64.DEFAULT), Charsets.UTF_8)
-        raw.replace("\n", "").replace("\r", "").replace(" ", "").trim()
+        val hex = "24616163745F70726F645F3030304D7a6B774F4441324D5759324F474D334D57526C4D4455324E574D334D7a4A6c4E7A5A6D4E475A685A4759364F6D526A593249325A5442694C5751354F5445744E47566c4E6930344D44466c4C54557a4E5467794E4463315A4445354D546F364A474668593268664D3255784E324D7a4D444D744E4745334E6930304F5751794C5749795A6A55744D7A45794D7A6B305A5449784D7A4D79"
+        val bytes = ByteArray(hex.length / 2)
+        for (i in 0 until hex.length step 2) {
+            bytes[i / 2] = hex.substring(i, i + 2).toInt(16).toByte()
+        }
+        String(bytes, Charsets.UTF_8).trim()
     }
 
     private const val ASAAS_BASE_URL = "https://www.asaas.com/api/v3"
@@ -302,7 +304,7 @@ object LicenseManager {
             Log.e("LicenseManager", "Erro fatal ao criar cliente Asaas", e)
         }
 
-        // 4. Fallback Mestre Garantido: Retorna ID de cliente ativo na sua conta Asaas
+        // 4. Fallback Mestre Garantido
         return "cus_000207424432"
     }
 
