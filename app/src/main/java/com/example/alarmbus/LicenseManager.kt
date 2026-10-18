@@ -35,6 +35,34 @@ object LicenseManager {
 
     private const val ASAAS_BASE_URL = "https://www.asaas.com/api/v3"
 
+    // 🎁 Os 5 códigos promocionais de teste para presente (60 dias cada)
+    val PROMO_CODES_60_DAYS = setOf("3301", "3302", "3303", "3304", "3305")
+
+    fun isPromoCodeAvailable(context: Context, code: String): Boolean {
+        val cleanCode = code.trim().replace("[^0-9]".toRegex(), "")
+        if (!PROMO_CODES_60_DAYS.contains(cleanCode)) return false
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        return !prefs.getBoolean("promo_used_$cleanCode", false)
+    }
+
+    fun redeemPromoCode(context: Context, code: String, deviceId: String): Boolean {
+        val cleanCode = code.trim().replace("[^0-9]".toRegex(), "")
+        if (!PROMO_CODES_60_DAYS.contains(cleanCode)) return false
+
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        if (prefs.getBoolean("promo_used_$cleanCode", false)) return false
+
+        // Marca o código promocional como USADO no banco de dados local
+        prefs.edit()
+            .putBoolean("promo_used_$cleanCode", true)
+            .putString("promo_device_$cleanCode", deviceId)
+            .apply()
+
+        // Libera 60 dias de uso gratuito
+        grantCustomLicense(context, 60)
+        return true
+    }
+
     fun isAdminUser(name: String, cpf: String): Boolean {
         val cleanCpf = cpf.replace("[^0-9]".toRegex(), "")
         return name.trim().equals(ADMIN_NAME, ignoreCase = true) && cleanCpf == ADMIN_CPF

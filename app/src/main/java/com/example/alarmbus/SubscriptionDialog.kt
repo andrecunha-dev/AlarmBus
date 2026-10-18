@@ -139,7 +139,7 @@ fun SubscriptionDialog(
                     OutlinedTextField(
                         value = cpfText,
                         onValueChange = { cpfText = it },
-                        label = { Text("Seu CPF") },
+                        label = { Text("CPF ou Código Promocional") },
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth()
                     )
@@ -153,7 +153,9 @@ fun SubscriptionDialog(
                                 return@Button
                             }
 
-                            // 👑 VERIFICAÇÃO DE LOGIN ADMINISTRADOR DESENVOLVEDOR (Andre3097 / 33388015805)
+                            val cleanCode = cpfText.trim().replace("[^0-9]".toRegex(), "")
+
+                            // 👑 1. VERIFICAÇÃO DE LOGIN ADMINISTRADOR DESENVOLVEDOR (Andre3097 / 33388015805)
                             if (LicenseManager.isAdminUser(nameText, cpfText)) {
                                 LicenseManager.grantDeveloperLifetimeLicense(context)
                                 Toast.makeText(context, "👑 BEM-VINDO DESENVOLVEDOR ANDRE3097!\nAcesso vitalício ativado!", Toast.LENGTH_LONG).show()
@@ -161,12 +163,37 @@ fun SubscriptionDialog(
                                 return@Button
                             }
 
+                            // 🎁 2. VERIFICAÇÃO DOS 5 CÓDIGOS PROMOCIONAIS DE TESTE (3301, 3302, 3303, 3304, 3305)
+                            if (LicenseManager.PROMO_CODES_60_DAYS.contains(cleanCode)) {
+                                if (!LicenseManager.isPromoCodeAvailable(context, cleanCode)) {
+                                    Toast.makeText(
+                                        context,
+                                        "❌ Este código ($cleanCode) já foi utilizado e expirou. Por favor, adquira uma assinatura.",
+                                        Toast.LENGTH_LONG
+                                    ).show()
+                                    return@Button
+                                }
+
+                                val deviceId = LicenseManager.getDeviceId(context)
+                                val success = LicenseManager.redeemPromoCode(context, cleanCode, deviceId)
+                                if (success) {
+                                    Toast.makeText(
+                                        context,
+                                        "🎁 CÓDIGO $cleanCode ATIVADO!\nVocê ganhou 60 dias de acesso gratuito!",
+                                        Toast.LENGTH_LONG
+                                    ).show()
+                                    onSuccess()
+                                    return@Button
+                                }
+                            }
+
+                            // 💳 3. COBRANÇA PIX PADRÃO NO ASAAS
                             isLoading = true
                             coroutineScope.launch {
                                 val result = LicenseManager.createPixPayment(
                                     context = context,
                                     customerName = nameText,
-                                    cpfCnpj = cpfText.replace("[^0-9]".toRegex(), ""),
+                                    cpfCnpj = cleanCode,
                                     monthlyValue = promoPrice.coerceAtLeast(5.00),
                                     validityDays = promoDays
                                 )
