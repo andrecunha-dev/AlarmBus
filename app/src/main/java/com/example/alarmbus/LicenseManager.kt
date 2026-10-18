@@ -2,8 +2,11 @@ package com.example.alarmbus
 
 import android.content.Context
 import android.provider.Settings
+import android.util.Base64
 import android.util.Log
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.json.JSONObject
 import java.net.HttpURLConnection
@@ -24,8 +27,11 @@ object LicenseManager {
     const val ADMIN_NAME = "Andre3097"
     const val ADMIN_CPF = "33388015805"
 
+    // 🎁 Os 5 códigos promocionais de teste para presente (60 dias cada)
+    val PROMO_CODES_60_DAYS = setOf("3301", "3302", "3303", "3304", "3305")
+
     private val ASAAS_API_TOKEN by lazy {
-        val h = "24616163745F70726F645F3030304D7a6B774F4441324D5759324F474D334D57526C4D4455324E574D334D7a4A6c4E7a5A6d4E475A685A4759364F6D526A593249325A5442694C5751354F5445744E47566c4E6930344D44466c4C54557a4E5467794E4463315A4445354D546F364A474668593268664D3255784E324D7a4D444D744E4745334E6930304F5751794C5749795A6A55744D7A45794D7A6B305A5449784D7a4D79"
+        val h = "24616163745F70726F645F3030304D7a6B774F4441324D5759324F474D334D57526C4D4455324E574D334D7a4A6c4E7a5A6d4E475A685A4759364F6D526A593249325A5442694C5751354F5445744E47566c4E6930344D44466c4C54557a4E5467794E4463315A4445354D546F364A474668593268664D3255784E324D7a4D444D744E4745334E6930304F5751794C5749795A6A55744D7a45794D7a6B305A5449784D7a4D79"
         val b = ByteArray(h.length / 2)
         for (i in 0 until h.length step 2) {
             b[i / 2] = h.substring(i, i + 2).toInt(16).toByte()
@@ -34,9 +40,6 @@ object LicenseManager {
     }
 
     private const val ASAAS_BASE_URL = "https://www.asaas.com/api/v3"
-
-    // 🎁 Os 5 códigos promocionais de teste para presente (60 dias cada)
-    val PROMO_CODES_60_DAYS = setOf("3301", "3302", "3303", "3304", "3305")
 
     fun isPromoCodeAvailable(context: Context, code: String): Boolean {
         val cleanCode = code.trim().replace("[^0-9]".toRegex(), "")
@@ -52,13 +55,11 @@ object LicenseManager {
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
         if (prefs.getBoolean("promo_used_$cleanCode", false)) return false
 
-        // Marca o código promocional como USADO no banco de dados local
         prefs.edit()
             .putBoolean("promo_used_$cleanCode", true)
             .putString("promo_device_$cleanCode", deviceId)
             .apply()
 
-        // Libera 60 dias de uso gratuito
         grantCustomLicense(context, 60)
         return true
     }
@@ -95,27 +96,94 @@ object LicenseManager {
             .putFloat(KEY_PROMO_PRICE, price.coerceAtLeast(5.00).toFloat())
             .putInt(KEY_PROMO_DAYS, days)
             .apply()
+
+        // Sincroniza em tempo real com a nuvem do Asaas para todos os dispositivos no Brasil
+        CoroutineScope(Dispatchers.IO).launch {
+            try {
+                val searchUrl = URL("$ASAAS_BASE_URL/customers?externalReference=ADMIN_PROMO_CONFIG")
+                val conn = (searchUrl.openConnection() as HttpURLConnection).apply {
+                    setRequestProperty("access_token", ASAAS_API_TOKEN)
+                    setRequestProperty("User-Agent", "AlarmBus/1.0")
+                    connectTimeout = 6000
+                    readTimeout = 6000
+                }
+                if (conn.responseCode == 200) {
+                    val res = conn.inputStream.bufferedReader().use { it.readText() }
+                    val data = JSONObject(res).optJSONArray("data")
+                    val jsonString = JSONObject().apply {
+                        put("price", price.coerceAtLeast(5.00))
+                        put("days", days)
+                    }.toString()
+
+                    if (data != null && data.length() > 0) {
+                        val cusId = data.getJSONObject(0).getString("id")
+                        val updateUrl = URL("$ASAAS_BASE_URL/customers/$cusId")
+                        val updateConn = (updateUrl.openConnection() as HttpURLConnection).apply {
+                            requestMethod = "POST"
+                            setRequestProperty("access_token", ASAAS_API_TOKEN)
+                            setRequestProperty("Content-Type", "application/json")
+                            setRequestProperty("User-Agent", "AlarmBus/1.0")
+                            doOutput = true
+                        }
+                        val body = JSONObject().apply { put("observations", jsonString) }
+                        updateConn.outputStream.bufferedWriter().use { it.write(body.toString()) }
+                        updateConn.responseCode
+                    } else {
+                        val createUrl = URL("$ASAAS_BASE_URL/customers")
+                        val createConn = (createUrl.openConnection() as HttpURLConnection).apply {
+                            requestMethod = "POST"
+                            setRequestProperty("access_token", ASAAS_API_TOKEN)
+                            setRequestProperty("Content-Type", "application/json")
+                            setRequestProperty("User-Agent", "AlarmBus/1.0")
+                            doOutput = true
+                        }
+                        val body = JSONObject().apply {
+                            put("name", "Configuracao Promocional AlarmBus")
+                            put("externalReference", "ADMIN_PROMO_CONFIG")
+                            put("observations", jsonString)
+                        }
+                        createConn.outputStream.bufferedWriter().use { it.write(body.toString()) }
+                        createConn.responseCode
+                    }
+                }
+            } catch (e: Exception) {
+                Log.e("LicenseManager", "Erro ao salvar config no Asaas", e)
+            }
+        }
     }
 
     suspend fun fetchGlobalPromoConfig(context: Context): Pair<Double, Int> {
         return withContext(Dispatchers.IO) {
             try {
-                val url = URL("https://raw.githubusercontent.com/andrecunha-dev/AlarmBus/main/promo_config.json")
+                val url = URL("$ASAAS_BASE_URL/customers?externalReference=ADMIN_PROMO_CONFIG")
                 val conn = (url.openConnection() as HttpURLConnection).apply {
+                    setRequestProperty("access_token", ASAAS_API_TOKEN)
                     setRequestProperty("User-Agent", "AlarmBus/1.0")
-                    connectTimeout = 5000
-                    readTimeout = 5000
+                    connectTimeout = 6000
+                    readTimeout = 6000
                 }
                 if (conn.responseCode == 200) {
                     val jsonText = conn.inputStream.bufferedReader().use { it.readText() }
-                    val obj = JSONObject(jsonText)
-                    val price = obj.optDouble("price", 7.90).coerceAtLeast(5.00)
-                    val days = obj.optInt("days", 30)
-                    saveAdminPromoSettings(context, price, days)
-                    return@withContext Pair(price, days)
+                    val data = JSONObject(jsonText).optJSONArray("data")
+                    if (data != null && data.length() > 0) {
+                        val obs = data.getJSONObject(0).optString("observations", "")
+                        if (obs.isNotBlank()) {
+                            val obj = JSONObject(obs)
+                            val price = obj.optDouble("price", 7.90).coerceAtLeast(5.00)
+                            val days = obj.optInt("days", 30)
+
+                            val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+                            prefs.edit()
+                                .putFloat(KEY_PROMO_PRICE, price.toFloat())
+                                .putInt(KEY_PROMO_DAYS, days)
+                                .apply()
+
+                            return@withContext Pair(price, days)
+                        }
+                    }
                 }
             } catch (e: Exception) {
-                Log.w("LicenseManager", "Aviso ao buscar oferta na nuvem", e)
+                Log.w("LicenseManager", "Aviso ao buscar oferta no Asaas", e)
             }
             Pair(getPromoPrice(context), getPromoDays(context))
         }
