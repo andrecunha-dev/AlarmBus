@@ -166,8 +166,8 @@ fun SubscriptionDialog(
                                 val result = LicenseManager.createPixPayment(
                                     context = context,
                                     customerName = nameText,
-                                    cpfCnpj = cpfText,
-                                    monthlyValue = promoPrice,
+                                    cpfCnpj = cpfText.replace("[^0-9]".toRegex(), ""),
+                                    monthlyValue = promoPrice.coerceAtLeast(5.00),
                                     validityDays = promoDays
                                 )
                                 isLoading = false

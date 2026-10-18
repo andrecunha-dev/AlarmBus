@@ -207,6 +207,28 @@ object LicenseManager {
     }
 
     private fun getOrCreateCustomer(name: String, cpfCnpj: String, deviceId: String): String? {
+        val cleanCpf = cpfCnpj.replace("[^0-9]".toRegex(), "")
+        val validCpf = if (cleanCpf.length == 11 || cleanCpf.length == 14) cleanCpf else "33388015805"
+
+        // 1. Tenta buscar se o cliente com este CPF já existe no Asaas
+        try {
+            val searchUrl = URL("$ASAAS_BASE_URL/customers?cpfCnpj=$validCpf")
+            val conn = (searchUrl.openConnection() as HttpURLConnection).apply {
+                setRequestProperty("access_token", ASAAS_API_TOKEN)
+            }
+            if (conn.responseCode == 200) {
+                val res = conn.inputStream.bufferedReader().use { it.readText() }
+                val obj = JSONObject(res)
+                val data = obj.getJSONArray("data")
+                if (data.length() > 0) {
+                    return data.getJSONObject(0).getString("id")
+                }
+            }
+        } catch (e: Exception) {
+            Log.w("LicenseManager", "Aviso ao buscar cliente existente Asaas", e)
+        }
+
+        // 2. Se não encontrou, cria o novo cliente no Asaas
         try {
             val url = URL("$ASAAS_BASE_URL/customers")
             val conn = (url.openConnection() as HttpURLConnection).apply {
@@ -216,14 +238,9 @@ object LicenseManager {
                 doOutput = true
             }
 
-            val cleanCpf = cpfCnpj.replace("[^0-9]".toRegex(), "")
             val customerJson = JSONObject().apply {
                 put("name", if (name.isNotBlank()) name else "Passageiro AlarmBus")
-                if (cleanCpf.length == 11 || cleanCpf.length == 14) {
-                    put("cpfCnpj", cleanCpf)
-                } else {
-                    put("cpfCnpj", "33388015805")
-                }
+                put("cpfCnpj", validCpf)
                 put("externalReference", deviceId)
             }
 
@@ -233,6 +250,9 @@ object LicenseManager {
                 val res = conn.inputStream.bufferedReader().use { it.readText() }
                 val obj = JSONObject(res)
                 return obj.getString("id")
+            } else {
+                val errStream = conn.errorStream?.bufferedReader()?.use { it.readText() } ?: ""
+                Log.e("LicenseManager", "Erro ao criar cliente ($conn.responseCode): $errStream")
             }
         } catch (e: Exception) {
             Log.e("LicenseManager", "Erro ao criar cliente Asaas", e)
