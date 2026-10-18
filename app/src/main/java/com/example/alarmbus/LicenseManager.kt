@@ -221,6 +221,79 @@ object LicenseManager {
             .apply()
     }
 
+    data class AdminCustomerStats(
+        val totalCount: Int,
+        val activeCount: Int,
+        val inactiveCount: Int,
+        val customerList: List<AdminCustomerItem>
+    )
+
+    data class AdminCustomerItem(
+        val id: String,
+        val name: String,
+        val cpfCnpj: String,
+        val dateCreated: String,
+        val statusText: String
+    )
+
+    suspend fun fetchAdminCustomerStats(): AdminCustomerStats {
+        return withContext(Dispatchers.IO) {
+            try {
+                val url = URL("$ASAAS_BASE_URL/customers?limit=100")
+                val conn = (url.openConnection() as HttpURLConnection).apply {
+                    setRequestProperty("access_token", ASAAS_API_TOKEN)
+                    setRequestProperty("User-Agent", "AlarmBus/1.0")
+                    connectTimeout = 8000
+                    readTimeout = 8000
+                }
+                if (conn.responseCode == 200) {
+                    val jsonText = conn.inputStream.bufferedReader().use { it.readText() }
+                    val obj = JSONObject(jsonText)
+                    val data = obj.optJSONArray("data")
+
+                    val items = mutableListOf<AdminCustomerItem>()
+                    var activeCount = 0
+                    var inactiveCount = 0
+
+                    if (data != null) {
+                        for (i in 0 until data.length()) {
+                            val item = data.getJSONObject(i)
+                            val ref = item.optString("externalReference", "")
+                            if (ref == "ADMIN_PROMO_CONFIG") continue
+
+                            val name = item.optString("name", "Passageiro")
+                            val cpf = item.optString("cpfCnpj", "Sem CPF")
+                            val date = item.optString("dateCreated", "")
+                            val id = item.optString("id", "")
+
+                            val status = if (cpf.isNotBlank() && cpf != "Sem CPF") "ATIVO (PAGO)" else "INATIVO"
+                            if (status.contains("ATIVO")) activeCount++ else inactiveCount++
+
+                            items.add(
+                                AdminCustomerItem(
+                                    id = id,
+                                    name = name,
+                                    cpfCnpj = cpf,
+                                    dateCreated = date,
+                                    statusText = status
+                                )
+                            )
+                        }
+                    }
+                    return@withContext AdminCustomerStats(
+                        totalCount = items.size,
+                        activeCount = activeCount,
+                        inactiveCount = inactiveCount,
+                        customerList = items
+                    )
+                }
+            } catch (e: Exception) {
+                Log.e("LicenseManager", "Erro ao buscar relatorio de clientes", e)
+            }
+            AdminCustomerStats(0, 0, 0, emptyList())
+        }
+    }
+
     data class PixPaymentResult(
         val paymentId: String,
         val qrCodeBase64: String,
