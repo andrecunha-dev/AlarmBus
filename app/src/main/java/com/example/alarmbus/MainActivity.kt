@@ -391,6 +391,10 @@ class MainActivity : ComponentActivity() {
         var showSubscriptionDialog by remember { mutableStateOf(false) }
         var showAdminPanelDialog by remember { mutableStateOf(false) }
 
+        LaunchedEffect(Unit) {
+            LicenseManager.fetchGlobalPromoConfig(context)
+        }
+
         if (showAdminPanelDialog) {
             AdminPanelDialog(
                 onDismiss = { showAdminPanelDialog = false },

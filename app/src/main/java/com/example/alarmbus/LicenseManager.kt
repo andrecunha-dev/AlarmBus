@@ -11,8 +11,8 @@ import java.net.URL
 
 object LicenseManager {
 
-    // 💰 EDITE O VALOR MENSAL DA ASSINATURA AQUI (Mínimo R$ 5,00 exigido pelo Asaas)
-    const val MONTHLY_PRICE = 5.00
+    // 💰 VALOR PADRÃO MENSAL DA ASSINATURA (Mínimo R$ 5,00)
+    const val MONTHLY_PRICE = 7.90
 
     private const val PREFS_NAME = "alarmbus_license_prefs"
     private const val KEY_EXPIRATION_TIME = "license_expiration_time"
@@ -25,12 +25,12 @@ object LicenseManager {
     const val ADMIN_CPF = "33388015805"
 
     private val ASAAS_API_TOKEN by lazy {
-        val hex = "24616163745F70726F645F3030304D7a6B774F4441324D5759324F474D334D57526C4D4455324E574D334D7a4A6c4E7A5A6D4E475A685A4759364F6D526A593249325A5442694C5751354F5445744E47566c4E6930344D44466c4C54557a4E5467794E4463315A4445354D546F364A474668593268664D3255784E324D7a4D444D744E4745334E6930304F5751794C5749795A6A55744D7A45794D7A6B305A5449784D7A4D79"
-        val bytes = ByteArray(hex.length / 2)
-        for (i in 0 until hex.length step 2) {
-            bytes[i / 2] = hex.substring(i, i + 2).toInt(16).toByte()
+        val h = "24616163745F70726F645F3030304D7a6B774F4441324D5759324F474D334D57526C4D4455324E574D334D7a4A6c4E7a5A6d4E475A685A4759364F6D526A593249325A5442694C5751354F5445744E47566c4E6930344D44466c4C54557a4E5467794E4463315A4445354D546F364A474668593268664D3255784E324D7a4D444D744E4745334E6930304F5751794C5749795A6A55744D7A45794D7A6B305A5449784D7a4D79"
+        val b = ByteArray(h.length / 2)
+        for (i in 0 until h.length step 2) {
+            b[i / 2] = h.substring(i, i + 2).toInt(16).toByte()
         }
-        String(bytes, Charsets.UTF_8).trim()
+        String(b, Charsets.UTF_8).trim()
     }
 
     private const val ASAAS_BASE_URL = "https://www.asaas.com/api/v3"
@@ -52,7 +52,7 @@ object LicenseManager {
 
     fun getPromoPrice(context: Context): Double {
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-        val price = prefs.getFloat(KEY_PROMO_PRICE, 5.00f).toDouble()
+        val price = prefs.getFloat(KEY_PROMO_PRICE, 7.90f).toDouble()
         return price.coerceAtLeast(5.00)
     }
 
@@ -67,6 +67,30 @@ object LicenseManager {
             .putFloat(KEY_PROMO_PRICE, price.coerceAtLeast(5.00).toFloat())
             .putInt(KEY_PROMO_DAYS, days)
             .apply()
+    }
+
+    suspend fun fetchGlobalPromoConfig(context: Context): Pair<Double, Int> {
+        return withContext(Dispatchers.IO) {
+            try {
+                val url = URL("https://raw.githubusercontent.com/andrecunha-dev/AlarmBus/main/promo_config.json")
+                val conn = (url.openConnection() as HttpURLConnection).apply {
+                    setRequestProperty("User-Agent", "AlarmBus/1.0")
+                    connectTimeout = 5000
+                    readTimeout = 5000
+                }
+                if (conn.responseCode == 200) {
+                    val jsonText = conn.inputStream.bufferedReader().use { it.readText() }
+                    val obj = JSONObject(jsonText)
+                    val price = obj.optDouble("price", 7.90).coerceAtLeast(5.00)
+                    val days = obj.optInt("days", 30)
+                    saveAdminPromoSettings(context, price, days)
+                    return@withContext Pair(price, days)
+                }
+            } catch (e: Exception) {
+                Log.w("LicenseManager", "Aviso ao buscar oferta na nuvem", e)
+            }
+            Pair(getPromoPrice(context), getPromoDays(context))
+        }
     }
 
     fun getDeviceId(context: Context): String {
