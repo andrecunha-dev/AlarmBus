@@ -197,7 +197,15 @@ object AlarmPlayer {
             Log.e("AlarmPlayer", "Erro ao cancelar notificação", e)
         }
 
-        // 2. Para a mídia
+        // 2. Para o serviço de monitoramento em segundo plano para sumir com a notificação
+        try {
+            val serviceIntent = Intent(context, LocationForegroundService::class.java)
+            context.stopService(serviceIntent)
+        } catch (e: Exception) {
+            Log.e("AlarmPlayer", "Erro ao parar location service", e)
+        }
+
+        // 3. Para a mídia
         try {
             val player = mediaPlayer
             if (player != null) {
@@ -212,7 +220,7 @@ object AlarmPlayer {
             mediaPlayer = null
         }
 
-        // 3. Para a vibração
+        // 4. Para a vibração
         try {
             vibrator?.cancel()
         } catch (e: Exception) {
@@ -221,7 +229,7 @@ object AlarmPlayer {
             vibrator = null
         }
 
-        // 4. Restaura o volume original do fluxo ativo que estava configurado no dispositivo antes do alarme
+        // 5. Restaura o volume original do fluxo ativo que estava configurado no dispositivo antes do alarme
         if (previousVolume != -1) {
             try {
                 audioManager.setStreamVolume(activeStreamType, previousVolume, 0)
@@ -232,10 +240,10 @@ object AlarmPlayer {
             }
         }
 
-        // 5. Libera o foco do áudio para a música (Spotify/YouTube) voltar a tocar automaticamente
+        // 6. Libera o foco do áudio para a música (Spotify/YouTube) voltar a tocar automaticamente
         abandonAudioFocus(audioManager)
 
-        // 6. Para o serviço de sobreposição (Overlay) caso ativo
+        // 7. Para o serviço de sobreposição (Overlay) caso ativo
         try {
             val overlayIntent = Intent(context, AlarmOverlayService::class.java)
             context.stopService(overlayIntent)
@@ -243,7 +251,7 @@ object AlarmPlayer {
             Log.e("AlarmPlayer", "Erro ao parar overlay service", e)
         }
 
-        // 7. Atualiza preferências e envia Broadcast para fechar a tela (AlarmActivity) e desativar a interface
+        // 8. Atualiza preferências e envia Broadcast para fechar a tela (AlarmActivity) e desativar a interface
         AlarmPreferences.setAlarmActive(context, false)
 
         val updateIntent = Intent("com.example.alarmbus.ACTION_ALARM_STOPPED")
