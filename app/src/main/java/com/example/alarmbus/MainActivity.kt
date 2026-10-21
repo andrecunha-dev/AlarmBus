@@ -390,9 +390,21 @@ class MainActivity : ComponentActivity() {
         var isSatelliteMap by remember { mutableStateOf(false) }
         var showSubscriptionDialog by remember { mutableStateOf(false) }
         var showAdminPanelDialog by remember { mutableStateOf(false) }
+        var updateInfoState by remember { mutableStateOf<UpdateManager.UpdateInfo?>(null) }
 
         LaunchedEffect(Unit) {
             LicenseManager.fetchGlobalPromoConfig(context)
+            val info = UpdateManager.checkForUpdates(context)
+            if (info.isUpdateAvailable) {
+                updateInfoState = info
+            }
+        }
+
+        updateInfoState?.let { info ->
+            UpdateDialog(
+                updateInfo = info,
+                onDismiss = { updateInfoState = null }
+            )
         }
 
         if (showAdminPanelDialog) {

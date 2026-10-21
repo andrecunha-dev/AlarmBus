@@ -1,4 +1,8 @@
 {
   "price": 7.90,
-  "days": 30
+  "days": 30,
+  "latestVersionCode": 1,
+  "latestVersionName": "1.0",
+  "apkDownloadUrl": "https://github.com/andrecunha-dev/AlarmBus/releases/download/v1.0/app-debug.apk",
+  "updateNotes": "Versão inicial com rastreamento por rotas e alarme integrado."
 }
