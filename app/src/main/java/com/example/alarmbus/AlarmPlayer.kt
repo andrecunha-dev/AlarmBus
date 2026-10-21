@@ -4,6 +4,7 @@ import android.content.Context
 import android.content.Intent
 import android.media.AudioAttributes
 import android.media.AudioDeviceInfo
+import android.media.AudioFocusRequest
 import android.media.AudioManager
 import android.media.MediaPlayer
 import android.media.RingtoneManager
@@ -17,8 +18,8 @@ import android.util.Log
 import kotlin.math.roundToInt
 
 /**
- * Gerenciador singleton para reprodução do som do alarme, vibração, controle de volume
- * e roteamento inteligente (Fone Bluetooth vs Alto-falante do Celular).
+ * Gerenciador singleton para reprodução do som do alarme, vibração, controle de volume,
+ * pausar música de fundo (Spotify/YouTube) e roteamento inteligente (Fone Bluetooth vs Alto-falante).
  */
 object AlarmPlayer {
     private var mediaPlayer: MediaPlayer? = null
@@ -26,6 +27,7 @@ object AlarmPlayer {
     private var previousVolume: Int = -1
     private var activeStreamType: Int = AudioManager.STREAM_ALARM
     private var ringing: Boolean = false
+    private var audioFocusRequest: AudioFocusRequest? = null
 
     fun isRinging(): Boolean = ringing
 
@@ -43,6 +45,47 @@ object AlarmPlayer {
         }
     }
 
+    private fun requestAudioFocus(audioManager: AudioManager) {
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                val focusRequest = AudioFocusRequest.Builder(AudioManager.AUDIOFOCUS_GAIN_TRANSIENT)
+                    .setAudioAttributes(
+                        AudioAttributes.Builder()
+                            .setUsage(AudioAttributes.USAGE_ALARM)
+                            .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+                            .build()
+                    )
+                    .setAcceptsDelayedFocusGain(false)
+                    .setOnAudioFocusChangeListener { }
+                    .build()
+                audioFocusRequest = focusRequest
+                audioManager.requestAudioFocus(focusRequest)
+            } else {
+                @Suppress("DEPRECATION")
+                audioManager.requestAudioFocus(
+                    null,
+                    AudioManager.STREAM_ALARM,
+                    AudioManager.AUDIOFOCUS_GAIN_TRANSIENT
+                )
+            }
+        } catch (e: Exception) {
+            Log.e("AlarmPlayer", "Erro ao solicitar AudioFocus", e)
+        }
+    }
+
+    private fun abandonAudioFocus(audioManager: AudioManager) {
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                audioFocusRequest?.let { audioManager.abandonAudioFocusRequest(it) }
+            } else {
+                @Suppress("DEPRECATION")
+                audioManager.abandonAudioFocus(null)
+            }
+        } catch (e: Exception) {
+            Log.e("AlarmPlayer", "Erro ao liberar AudioFocus", e)
+        }
+    }
+
     fun startAlarm(
         context: Context,
         ringtoneUri: Uri? = null,
@@ -53,6 +96,10 @@ object AlarmPlayer {
         ringing = true
 
         val audioManager = context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
+
+        // 1. Pausa qualquer música ou áudio em segundo plano (Spotify, YouTube, Podcasts)
+        requestAudioFocus(audioManager)
+
         val hasBluetooth = isBluetoothConnected(audioManager)
 
         // Se houver fone Bluetooth conectado, o som sai EXCLUSIVAMENTE pelo fone (STREAM_MUSIC / USAGE_MEDIA)
@@ -61,11 +108,11 @@ object AlarmPlayer {
         val audioUsage = if (hasBluetooth) AudioAttributes.USAGE_MEDIA else AudioAttributes.USAGE_ALARM
         val contentType = if (hasBluetooth) AudioAttributes.CONTENT_TYPE_MUSIC else AudioAttributes.CONTENT_TYPE_SONIFICATION
 
-        // 1. Salva o volume original do fluxo ativo do dispositivo
+        // 2. Salva o volume original do fluxo ativo do dispositivo
         val maxVol = audioManager.getStreamMaxVolume(activeStreamType)
         previousVolume = audioManager.getStreamVolume(activeStreamType)
 
-        // 2. Ajusta o volume com base na porcentagem selecionada na barra (0 a 100%)
+        // 3. Ajusta o volume com base na porcentagem selecionada na barra (0 a 100%)
         val targetVol = (maxVol * (volumeLevelPercent / 100f)).roundToInt().coerceIn(0, maxVol)
 
         try {
@@ -74,7 +121,7 @@ object AlarmPlayer {
             Log.e("AlarmPlayer", "Erro ao ajustar volume", e)
         }
 
-        // 3. Toca o som em loop usando MediaPlayer direcionado ao canal ativo
+        // 4. Toca o som em loop usando MediaPlayer direcionado ao canal ativo
         try {
             val soundUri = ringtoneUri
                 ?: RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM)
@@ -96,7 +143,7 @@ object AlarmPlayer {
             Log.e("AlarmPlayer", "Erro ao tocar som do alarme", e)
         }
 
-        // 4. Vibração
+        // 5. Vibração
         if (vibrate) {
             try {
                 val vib = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
@@ -121,7 +168,7 @@ object AlarmPlayer {
             }
         }
 
-        // 5. Inicia o serviço de Overlay (janela flutuante, se permitido)
+        // 6. Inicia o serviço de Overlay (janela flutuante, se permitido)
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M || Settings.canDrawOverlays(context)) {
             try {
                 val overlayIntent = Intent(context, AlarmOverlayService::class.java)
@@ -131,7 +178,7 @@ object AlarmPlayer {
             }
         }
 
-        // 6. Abre a tela cheia de alarme (AlarmActivity) para permitir desativação rápida
+        // 7. Abre a tela cheia de alarme (AlarmActivity) para permitir desativação rápida
         try {
             val alarmActivityIntent = Intent(context, AlarmActivity::class.java)
             alarmActivityIntent.addFlags(
@@ -147,6 +194,8 @@ object AlarmPlayer {
 
     fun stopAlarm(context: Context) {
         ringing = false
+
+        val audioManager = context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
 
         // Para a mídia
         try {
@@ -175,7 +224,6 @@ object AlarmPlayer {
         // Restaura o volume original do fluxo ativo que estava configurado no dispositivo antes do alarme
         if (previousVolume != -1) {
             try {
-                val audioManager = context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
                 audioManager.setStreamVolume(activeStreamType, previousVolume, 0)
             } catch (e: Exception) {
                 Log.e("AlarmPlayer", "Erro ao restaurar volume original", e)
@@ -183,6 +231,9 @@ object AlarmPlayer {
                 previousVolume = -1
             }
         }
+
+        // Libera o foco do áudio para a música (Spotify/YouTube) voltar a tocar automaticamente
+        abandonAudioFocus(audioManager)
 
         // Para o serviço de sobreposição (Overlay)
         try {
