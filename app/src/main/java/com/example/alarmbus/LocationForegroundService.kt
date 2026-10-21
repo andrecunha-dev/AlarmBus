@@ -12,6 +12,7 @@ import android.location.Location
 import android.os.Build
 import android.os.IBinder
 import android.os.Looper
+import android.util.Log
 import androidx.core.app.NotificationCompat
 import androidx.core.content.ContextCompat
 import com.google.android.gms.location.FusedLocationProviderClient
@@ -20,6 +21,14 @@ import com.google.android.gms.location.LocationRequest
 import com.google.android.gms.location.LocationResult
 import com.google.android.gms.location.LocationServices
 import com.google.android.gms.location.Priority
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import org.json.JSONObject
+import java.net.HttpURLConnection
+import java.net.URL
 
 /**
  * Serviço em primeiro plano responsável por monitorar a localização do dispositivo em segundo plano,
@@ -30,6 +39,9 @@ class LocationForegroundService : Service() {
     private lateinit var fusedLocationClient: FusedLocationProviderClient
     private lateinit var locationCallback: LocationCallback
     private lateinit var notificationManager: NotificationManager
+
+    private val serviceJob = Job()
+    private val serviceScope = CoroutineScope(Dispatchers.IO + serviceJob)
 
     companion object {
         const val NOTIFICATION_ID = 1001
@@ -49,28 +61,29 @@ class LocationForegroundService : Service() {
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         val notification = createTrackingNotification("Monitorando sua localização...")
         startForeground(NOTIFICATION_ID, notification)
+
         startLocationTracking()
+
         return START_STICKY
     }
 
     private fun createNotificationChannels() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            // Canal de monitoramento
             val locationChannel = NotificationChannel(
                 CHANNEL_LOCATION_ID,
                 "Monitoramento de Localização",
                 NotificationManager.IMPORTANCE_LOW
             ).apply {
-                description = "Canal para o serviço de monitoramento de localização"
+                description = "Notificação de acompanhamento da distância até o destino"
             }
 
-            // Canal de alarme disparado (Prioridade Alta)
             val alarmChannel = NotificationChannel(
                 CHANNEL_ALARM_ID,
-                "Disparo do Alarme",
+                "Alerta de Chegada",
                 NotificationManager.IMPORTANCE_HIGH
             ).apply {
-                description = "Notificação enviada quando o alarme de proximidade dispara"
+                description = "Notificação disparada ao chegar perto do destino"
+                setSound(null, null)
                 enableVibration(true)
             }
 
@@ -79,51 +92,36 @@ class LocationForegroundService : Service() {
         }
     }
 
-    /**
-     * Cria a notificação de monitoramento contínuo com um botão direto para desativar o alarme.
-     */
     private fun createTrackingNotification(statusText: String): Notification {
-        val stopIntent = Intent(this, AlarmActionReceiver::class.java).apply {
-            action = "com.example.alarmbus.ACTION_STOP_ALARM"
-        }
-        val stopPendingIntent = PendingIntent.getBroadcast(
+        val intent = Intent(this, MainActivity::class.java)
+        val pendingIntent = PendingIntent.getActivity(
             this,
             0,
-            stopIntent,
-            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-        )
-
-        val openAppIntent = Intent(this, MainActivity::class.java).apply {
-            flags = Intent.FLAG_ACTIVITY_SINGLE_TOP
-        }
-        val openAppPendingIntent = PendingIntent.getActivity(
-            this,
-            0,
-            openAppIntent,
+            intent,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
         return NotificationCompat.Builder(this, CHANNEL_LOCATION_ID)
-            .setContentTitle("Alarme de Destino Ativo")
+            .setContentTitle("AlarmBus GPS")
             .setContentText(statusText)
-            .setSmallIcon(android.R.drawable.ic_dialog_map)
-            .setPriority(NotificationCompat.PRIORITY_LOW)
+            .setSmallIcon(R.mipmap.ic_launcher)
+            .setContentIntent(pendingIntent)
             .setOngoing(true)
-            .setContentIntent(openAppPendingIntent)
-            .addAction(
-                android.R.drawable.ic_menu_close_clear_cancel,
-                "DESATIVAR ALARME",
-                stopPendingIntent
-            )
+            .setPriority(NotificationCompat.PRIORITY_LOW)
             .build()
     }
 
-    /**
-     * Atualiza para uma notificação de alta prioridade quando o alarme estiver disparando.
-     */
-    private fun showAlarmTriggeredNotification(distancia: Int) {
+    private fun showAlarmTriggeredNotification(distanciaMetros: Int) {
+        val intent = Intent(this, MainActivity::class.java)
+        val pendingIntent = PendingIntent.getActivity(
+            this,
+            0,
+            intent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+
         val stopIntent = Intent(this, AlarmActionReceiver::class.java).apply {
-            action = "com.example.alarmbus.ACTION_STOP_ALARM"
+            action = "PARAR_ALARME"
         }
         val stopPendingIntent = PendingIntent.getBroadcast(
             this,
@@ -132,30 +130,17 @@ class LocationForegroundService : Service() {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
-        val alarmActivityIntent = Intent(this, AlarmActivity::class.java).apply {
-            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP)
-        }
-        val alarmActivityPendingIntent = PendingIntent.getActivity(
-            this,
-            0,
-            alarmActivityIntent,
-            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-        )
-
         val notification = NotificationCompat.Builder(this, CHANNEL_ALARM_ID)
-            .setContentTitle("🚨 CHEGANDO AO DESTINO!")
-            .setContentText("Você está a $distancia m do seu destino!")
-            .setSmallIcon(android.R.drawable.ic_dialog_map)
+            .setContentTitle("🚨 VOCÊ ESTÁ CHEGANDO!")
+            .setContentText("Destino a aproximadamente ${distanciaMetros}m. Prepare-se para descer.")
+            .setSmallIcon(R.mipmap.ic_launcher)
+            .setContentIntent(pendingIntent)
             .setPriority(NotificationCompat.PRIORITY_MAX)
             .setCategory(NotificationCompat.CATEGORY_ALARM)
+            .setFullScreenIntent(pendingIntent, true)
+            .addAction(R.drawable.ic_launcher_foreground, "DESATIVAR ALARME", stopPendingIntent)
+            .setAutoCancel(false)
             .setOngoing(true)
-            .setFullScreenIntent(alarmActivityPendingIntent, true)
-            .setContentIntent(alarmActivityPendingIntent)
-            .addAction(
-                android.R.drawable.ic_menu_close_clear_cancel,
-                "DESATIVAR ALARME",
-                stopPendingIntent
-            )
             .build()
 
         notificationManager.notify(NOTIFICATION_ID, notification)
@@ -196,9 +181,51 @@ class LocationForegroundService : Service() {
         }
 
         val straightDistance = location.distanceTo(destino)
-        // Distância viária de rodagem pelas ruas (~1.35x a distância em linha reta)
-        val roadDistance = straightDistance * 1.35f
 
+        // Se estiver longe (> 2.5x o raio), aproxima por 1.35x. Se estiver próximo do raio de alerta, consulta a rota OSRM pelas ruas.
+        if (straightDistance > alertDist * 2.5f) {
+            val roadDistance = straightDistance * 1.35f
+            processarDistanciaEAlarme(location, roadDistance, alertDist)
+        } else {
+            serviceScope.launch {
+                val exactRoadDistance = fetchExactRoadDistance(
+                    location.latitude, location.longitude,
+                    destLat, destLng
+                )
+                processarDistanciaEAlarme(location, exactRoadDistance, alertDist)
+            }
+        }
+    }
+
+    private suspend fun fetchExactRoadDistance(startLat: Double, startLng: Double, destLat: Double, destLng: Double): Float {
+        return withContext(Dispatchers.IO) {
+            try {
+                val urlString = "https://router.project-osrm.org/route/v1/driving/$startLng,$startLat;$destLng,$destLat?overview=false"
+                val url = URL(urlString)
+                val conn = (url.openConnection() as HttpURLConnection).apply {
+                    setRequestProperty("User-Agent", "AlarmBusGPS/1.0")
+                    connectTimeout = 3000
+                    readTimeout = 3000
+                }
+                if (conn.responseCode == 200) {
+                    val jsonText = conn.inputStream.bufferedReader().use { it.readText() }
+                    val jsonObj = JSONObject(jsonText)
+                    val routes = jsonObj.getJSONArray("routes")
+                    if (routes.length() > 0) {
+                        val distMeters = routes.getJSONObject(0).getDouble("distance")
+                        return@withContext distMeters.toFloat()
+                    }
+                }
+            } catch (e: Exception) {
+                Log.e("LocationService", "Erro OSRM road distance", e)
+            }
+            val straight = FloatArray(1)
+            Location.distanceBetween(startLat, startLng, destLat, destLng, straight)
+            straight[0] * 1.35f
+        }
+    }
+
+    private fun processarDistanciaEAlarme(location: Location, roadDistance: Float, alertDist: Int) {
         // Envia broadcast para a MainActivity atualizar a interface com a distância de rodagem real
         val updateIntent = Intent("LOCATION_UPDATE").apply {
             putExtra("latitude", location.latitude)
@@ -215,7 +242,7 @@ class LocationForegroundService : Service() {
             val notification = createTrackingNotification(status)
             notificationManager.notify(NOTIFICATION_ID, notification)
 
-            // Dispara o alarme apenas quando a distância real de rodagem pelas ruas for menor que o raio
+            // Dispara o alarme apenas quando a distância real de rodagem pelas ruas/trajeto for menor que o raio
             if (roadDistance < alertDist) {
                 val toneUri = AlarmPreferences.getToneUri(this)
                 val vibrate = AlarmPreferences.isVibrationActive(this)
@@ -234,6 +261,7 @@ class LocationForegroundService : Service() {
 
     override fun onDestroy() {
         super.onDestroy()
+        serviceJob.cancel()
         if (::locationCallback.isInitialized) {
             fusedLocationClient.removeLocationUpdates(locationCallback)
         }
