@@ -3,6 +3,6 @@
   "days": 30,
   "latestVersionCode": 2,
   "latestVersionName": "1.1",
-  "apkDownloadUrl": "https://raw.githubusercontent.com/andrecunha-dev/AlarmBus/main/app-debug.apk",
+  "apkDownloadUrl": "https://raw.githubusercontent.com/andrecunha-dev/AlarmBus/main/AlarmBus.apk",
   "updateNotes": "Pausa automática do Spotify ao tocar alarme no fone Bluetooth e otimizações de rotas GPS."
 }
