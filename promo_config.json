@@ -1,8 +1,8 @@
 {
   "price": 7.90,
   "days": 30,
-  "latestVersionCode": 2,
-  "latestVersionName": "1.1",
+  "latestVersionCode": 3,
+  "latestVersionName": "1.2",
   "apkDownloadUrl": "https://raw.githubusercontent.com/andrecunha-dev/AlarmBus/main/AlarmBus.apk",
-  "updateNotes": "Pausa automática do Spotify ao tocar alarme no fone Bluetooth e otimizações de rotas GPS."
+  "updateNotes": "Botão único gigante de desativação do alarme e sincronização perfeita de parada."
 }

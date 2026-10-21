@@ -169,17 +169,7 @@ object AlarmPlayer {
             }
         }
 
-        // 6. Inicia o serviço de Overlay (janela flutuante, se permitido)
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M || Settings.canDrawOverlays(context)) {
-            try {
-                val overlayIntent = Intent(context, AlarmOverlayService::class.java)
-                context.startService(overlayIntent)
-            } catch (e: Exception) {
-                Log.e("AlarmPlayer", "Erro ao iniciar overlay", e)
-            }
-        }
-
-        // 7. Abre a tela cheia de alarme (AlarmActivity) para permitir desativação rápida
+        // 6. Abre a tela cheia de alarme (AlarmActivity) com o botão único gigante de desativação
         try {
             val alarmActivityIntent = Intent(context, AlarmActivity::class.java)
             alarmActivityIntent.addFlags(
@@ -245,7 +235,7 @@ object AlarmPlayer {
         // 5. Libera o foco do áudio para a música (Spotify/YouTube) voltar a tocar automaticamente
         abandonAudioFocus(audioManager)
 
-        // 6. Para o serviço de sobreposição (Overlay)
+        // 6. Para o serviço de sobreposição (Overlay) caso ativo
         try {
             val overlayIntent = Intent(context, AlarmOverlayService::class.java)
             context.stopService(overlayIntent)
