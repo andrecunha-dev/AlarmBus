@@ -1,5 +1,6 @@
 package com.example.alarmbus
 
+import android.app.NotificationManager
 import android.content.Context
 import android.content.Intent
 import android.media.AudioAttributes
@@ -196,8 +197,17 @@ object AlarmPlayer {
         ringing = false
 
         val audioManager = context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
+        val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
 
-        // Para a mídia
+        // 1. Cancela imediatamente todas as notificações de alarme e rastreamento da barra do Android
+        try {
+            notificationManager.cancel(LocationForegroundService.NOTIFICATION_ID)
+            notificationManager.cancelAll()
+        } catch (e: Exception) {
+            Log.e("AlarmPlayer", "Erro ao cancelar notificação", e)
+        }
+
+        // 2. Para a mídia
         try {
             val player = mediaPlayer
             if (player != null) {
@@ -212,7 +222,7 @@ object AlarmPlayer {
             mediaPlayer = null
         }
 
-        // Para a vibração
+        // 3. Para a vibração
         try {
             vibrator?.cancel()
         } catch (e: Exception) {
@@ -221,7 +231,7 @@ object AlarmPlayer {
             vibrator = null
         }
 
-        // Restaura o volume original do fluxo ativo que estava configurado no dispositivo antes do alarme
+        // 4. Restaura o volume original do fluxo ativo que estava configurado no dispositivo antes do alarme
         if (previousVolume != -1) {
             try {
                 audioManager.setStreamVolume(activeStreamType, previousVolume, 0)
@@ -232,10 +242,10 @@ object AlarmPlayer {
             }
         }
 
-        // Libera o foco do áudio para a música (Spotify/YouTube) voltar a tocar automaticamente
+        // 5. Libera o foco do áudio para a música (Spotify/YouTube) voltar a tocar automaticamente
         abandonAudioFocus(audioManager)
 
-        // Para o serviço de sobreposição (Overlay)
+        // 6. Para o serviço de sobreposição (Overlay)
         try {
             val overlayIntent = Intent(context, AlarmOverlayService::class.java)
             context.stopService(overlayIntent)
@@ -243,7 +253,7 @@ object AlarmPlayer {
             Log.e("AlarmPlayer", "Erro ao parar overlay service", e)
         }
 
-        // Atualiza preferências e envia Broadcast para a interface
+        // 7. Atualiza preferências e envia Broadcast para fechar a tela (AlarmActivity) e desativar a interface
         AlarmPreferences.setAlarmActive(context, false)
 
         val updateIntent = Intent("com.example.alarmbus.ACTION_ALARM_STOPPED")
