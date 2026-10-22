@@ -1,5 +1,8 @@
 package com.example.alarmbus
 
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
+import android.util.Log
 import android.widget.Toast
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -45,7 +48,10 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import androidx.core.content.FileProvider
 import kotlinx.coroutines.launch
+import java.io.File
+import java.io.FileOutputStream
 
 @Composable
 fun AdminPanelDialog(
@@ -156,17 +162,47 @@ fun AdminPanelDialog(
 
                 Spacer(modifier = Modifier.height(10.dp))
 
-                // BOTÃO COMPARTILHAR LINK DE DOWNLOAD DO ALARMBUS
+                // BOTÃO COMPARTILHAR LINK E BANNER DE DOWNLOAD DO ALARMBUS
                 Button(
                     onClick = {
-                        val shareIntent = android.content.Intent(android.content.Intent.ACTION_SEND).apply {
-                            type = "text/plain"
-                            putExtra(
-                                android.content.Intent.EXTRA_TEXT,
-                                "🚌 *AlarmBus GPS* - Baixe o aplicativo e durma tranquilo nas suas viagens de ônibus:\nhttps://github.com/andrecunha-dev/AlarmBus/raw/main/AlarmBus.apk"
+                        try {
+                            val bitmap = BitmapFactory.decodeResource(context.resources, R.drawable.promo_banner)
+                            val cachePath = File(context.cacheDir, "images")
+                            cachePath.mkdirs()
+                            val file = File(cachePath, "AlarmBus_Banner.png")
+                            val stream = FileOutputStream(file)
+                            bitmap.compress(Bitmap.CompressFormat.PNG, 100, stream)
+                            stream.close()
+
+                            val contentUri = FileProvider.getUriForFile(
+                                context,
+                                "${context.packageName}.fileprovider",
+                                file
                             )
+
+                            if (contentUri != null) {
+                                val shareIntent = android.content.Intent(android.content.Intent.ACTION_SEND).apply {
+                                    type = "image/png"
+                                    putExtra(android.content.Intent.EXTRA_STREAM, contentUri)
+                                    putExtra(
+                                        android.content.Intent.EXTRA_TEXT,
+                                        "🚌 *AlarmBus GPS* - Baixe o aplicativo e durma tranquilo nas suas viagens de ônibus:\nhttps://github.com/andrecunha-dev/AlarmBus/raw/main/AlarmBus.apk"
+                                    )
+                                    addFlags(android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                                }
+                                context.startActivity(android.content.Intent.createChooser(shareIntent, "Compartilhar Banner e Link do AlarmBus"))
+                            }
+                        } catch (e: Exception) {
+                            Log.e("AdminPanel", "Erro ao compartilhar banner", e)
+                            val shareIntent = android.content.Intent(android.content.Intent.ACTION_SEND).apply {
+                                type = "text/plain"
+                                putExtra(
+                                    android.content.Intent.EXTRA_TEXT,
+                                    "🚌 *AlarmBus GPS* - Baixe o aplicativo e durma tranquilo nas suas viagens de ônibus:\nhttps://github.com/andrecunha-dev/AlarmBus/raw/main/AlarmBus.apk"
+                                )
+                            }
+                            context.startActivity(android.content.Intent.createChooser(shareIntent, "Compartilhar AlarmBus no WhatsApp"))
                         }
-                        context.startActivity(android.content.Intent.createChooser(shareIntent, "Compartilhar AlarmBus no WhatsApp"))
                     },
                     modifier = Modifier
                         .fillMaxWidth()
@@ -177,7 +213,7 @@ fun AdminPanelDialog(
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Icon(Icons.Default.Share, contentDescription = null, modifier = Modifier.size(20.dp))
                         Spacer(modifier = Modifier.width(8.dp))
-                        Text("📲 COMPARTILHAR LINK DE DOWNLOAD", fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                        Text("📲 COMPARTILHAR LINK E BANNER", fontWeight = FontWeight.Bold, fontSize = 13.sp)
                     }
                 }
 

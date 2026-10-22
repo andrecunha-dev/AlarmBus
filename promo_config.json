@@ -1,8 +1,8 @@
 {
   "price": 7.90,
   "days": 30,
-  "latestVersionCode": 6,
-  "latestVersionName": "1.5",
+  "latestVersionCode": 8,
+  "latestVersionName": "1.7",
   "apkDownloadUrl": "https://raw.githubusercontent.com/andrecunha-dev/AlarmBus/main/AlarmBus.apk",
-  "updateNotes": "Sincronização idêntica em tempo real da distância do mapa com o disparo do alarme."
+  "updateNotes": "Botão de compartilhamento automático do banner com o link oficial de download."
 }
