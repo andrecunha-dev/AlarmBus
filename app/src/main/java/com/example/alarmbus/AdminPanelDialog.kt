@@ -63,7 +63,7 @@ fun AdminPanelDialog(
     val purpleColor = Color(0xFF6750A4)
     val scrollState = rememberScrollState()
 
-    val currentPrice = LicenseManager.getPromoPrice(context)
+    val currentPrice = if (LicenseManager.getPromoPrice(context) < 5.00) 7.90 else LicenseManager.getPromoPrice(context)
     val currentDays = LicenseManager.getPromoDays(context)
 
     var priceText by remember { mutableStateOf(String.format(java.util.Locale.US, "%.2f", currentPrice)) }
