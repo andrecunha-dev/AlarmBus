@@ -19,6 +19,7 @@ import androidx.compose.material.icons.filled.Analytics
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Save
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -153,7 +154,34 @@ fun AdminPanelDialog(
                     }
                 }
 
-                Spacer(modifier = Modifier.height(16.dp))
+                Spacer(modifier = Modifier.height(10.dp))
+
+                // BOTÃO COMPARTILHAR LINK DE DOWNLOAD DO ALARMBUS
+                Button(
+                    onClick = {
+                        val shareIntent = android.content.Intent(android.content.Intent.ACTION_SEND).apply {
+                            type = "text/plain"
+                            putExtra(
+                                android.content.Intent.EXTRA_TEXT,
+                                "🚌 *AlarmBus GPS* - Baixe o aplicativo e durma tranquilo nas suas viagens de ônibus:\nhttps://github.com/andrecunha-dev/AlarmBus/raw/main/AlarmBus.apk"
+                            )
+                        }
+                        context.startActivity(android.content.Intent.createChooser(shareIntent, "Compartilhar AlarmBus no WhatsApp"))
+                    },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(48.dp),
+                    shape = RoundedCornerShape(10.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF00897B))
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Default.Share, contentDescription = null, modifier = Modifier.size(20.dp))
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text("📲 COMPARTILHAR LINK DE DOWNLOAD", fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(10.dp))
 
                 // BOTÃO VER RELATÓRIO DE CADASTROS (ATIVOS E INATIVOS)
                 Button(
