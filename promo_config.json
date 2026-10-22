@@ -1,8 +1,8 @@
 {
   "price": 7.90,
   "days": 30,
-  "latestVersionCode": 5,
-  "latestVersionName": "1.4",
+  "latestVersionCode": 6,
+  "latestVersionName": "1.5",
   "apkDownloadUrl": "https://raw.githubusercontent.com/andrecunha-dev/AlarmBus/main/AlarmBus.apk",
-  "updateNotes": "Ativação do WakeLock anti-congelamento de GPS e melhorias na checagem de proximidade."
+  "updateNotes": "Sincronização idêntica em tempo real da distância do mapa com o disparo do alarme."
 }

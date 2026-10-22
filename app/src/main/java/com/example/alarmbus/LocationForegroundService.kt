@@ -23,18 +23,10 @@ import com.google.android.gms.location.LocationRequest
 import com.google.android.gms.location.LocationResult
 import com.google.android.gms.location.LocationServices
 import com.google.android.gms.location.Priority
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
-import org.json.JSONObject
-import java.net.HttpURLConnection
-import java.net.URL
 
 /**
- * Serviço em primeiro plano responsável por monitorar a localização do dispositivo em segundo plano,
- * manter a CPU ativa com WakeLock para evitar travamentos pelo Modo Doze e acionar o alarme.
+ * Serviço em primeiro plano responsável por monitorar a localização exata do GPS em tempo real,
+ * manter a CPU ativa com WakeLock para evitar travamentos pelo Modo Doze e acionar o alarme ao entrar no raio.
  */
 class LocationForegroundService : Service() {
 
@@ -42,9 +34,6 @@ class LocationForegroundService : Service() {
     private lateinit var locationCallback: LocationCallback
     private lateinit var notificationManager: NotificationManager
     private var wakeLock: PowerManager.WakeLock? = null
-
-    private val serviceJob = Job()
-    private val serviceScope = CoroutineScope(Dispatchers.IO + serviceJob)
 
     companion object {
         const val NOTIFICATION_ID = 1001
@@ -196,70 +185,30 @@ class LocationForegroundService : Service() {
             longitude = destLng
         }
 
-        val straightDistance = location.distanceTo(destino)
+        val realDistance = location.distanceTo(destino)
 
-        // Se estiver longe (> 2.5x o raio), aproxima por 1.35x. Se estiver próximo do raio de alerta, consulta a rota OSRM pelas ruas.
-        if (straightDistance > alertDist * 2.5f) {
-            val roadDistance = straightDistance * 1.35f
-            processarDistanciaEAlarme(location, roadDistance, alertDist)
-        } else {
-            serviceScope.launch {
-                val exactRoadDistance = fetchExactRoadDistance(
-                    location.latitude, location.longitude,
-                    destLat, destLng
-                )
-                processarDistanciaEAlarme(location, exactRoadDistance, alertDist)
-            }
-        }
+        processarDistanciaEAlarme(location, realDistance, alertDist)
     }
 
-    private suspend fun fetchExactRoadDistance(startLat: Double, startLng: Double, destLat: Double, destLng: Double): Float {
-        return withContext(Dispatchers.IO) {
-            try {
-                val urlString = "https://router.project-osrm.org/route/v1/driving/$startLng,$startLat;$destLng,$destLat?overview=false"
-                val url = URL(urlString)
-                val conn = (url.openConnection() as HttpURLConnection).apply {
-                    setRequestProperty("User-Agent", "AlarmBusGPS/1.0")
-                    connectTimeout = 2000
-                    readTimeout = 2000
-                }
-                if (conn.responseCode == 200) {
-                    val jsonText = conn.inputStream.bufferedReader().use { it.readText() }
-                    val jsonObj = JSONObject(jsonText)
-                    val routes = jsonObj.getJSONArray("routes")
-                    if (routes.length() > 0) {
-                        val distMeters = routes.getJSONObject(0).getDouble("distance")
-                        return@withContext distMeters.toFloat()
-                    }
-                }
-            } catch (e: Exception) {
-                Log.e("LocationService", "Erro OSRM road distance", e)
-            }
-            val straight = FloatArray(1)
-            Location.distanceBetween(startLat, startLng, destLat, destLng, straight)
-            straight[0] * 1.35f
-        }
-    }
-
-    private fun processarDistanciaEAlarme(location: Location, roadDistance: Float, alertDist: Int) {
-        // Envia broadcast para a MainActivity atualizar a interface com a distância de rodagem real
+    private fun processarDistanciaEAlarme(location: Location, realDistance: Float, alertDist: Int) {
+        // Envia broadcast para a MainActivity atualizar a interface com a distância exata e idêntica do mapa
         val updateIntent = Intent("LOCATION_UPDATE").apply {
             putExtra("latitude", location.latitude)
             putExtra("longitude", location.longitude)
-            putExtra("distancia", roadDistance)
+            putExtra("distancia", realDistance.toDouble())
             setPackage(packageName)
         }
         sendBroadcast(updateIntent)
 
         if (AlarmPlayer.isRinging()) {
-            showAlarmTriggeredNotification(roadDistance.toInt())
+            showAlarmTriggeredNotification(realDistance.toInt())
         } else {
-            val status = "Destino a ${roadDistance.toInt()} m"
+            val status = "Destino a ${realDistance.toInt()} m"
             val notification = createTrackingNotification(status)
             notificationManager.notify(NOTIFICATION_ID, notification)
 
-            // Dispara o alarme apenas quando a distância real de rodagem pelas ruas/trajeto for menor que o raio
-            if (roadDistance < alertDist) {
+            // Dispara o alarme exatamente quando a distância do GPS entrar no raio configurado (ex: <= 300m)
+            if (realDistance <= alertDist) {
                 val toneUri = AlarmPreferences.getToneUri(this)
                 val vibrate = AlarmPreferences.isVibrationActive(this)
                 val volLevel = AlarmPreferences.getVolumeLevel(this)
@@ -270,14 +219,13 @@ class LocationForegroundService : Service() {
                     vibrate = vibrate,
                     volumeLevelPercent = volLevel
                 )
-                showAlarmTriggeredNotification(roadDistance.toInt())
+                showAlarmTriggeredNotification(realDistance.toInt())
             }
         }
     }
 
     override fun onDestroy() {
         super.onDestroy()
-        serviceJob.cancel()
         try {
             if (wakeLock?.isHeld == true) {
                 wakeLock?.release()
