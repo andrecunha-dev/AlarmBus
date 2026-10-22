@@ -2,7 +2,6 @@ package com.example.alarmbus
 
 import android.content.Context
 import android.provider.Settings
-import android.util.Base64
 import android.util.Log
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -27,8 +26,8 @@ object LicenseManager {
     const val ADMIN_NAME = "Andre3097"
     const val ADMIN_CPF = "33388015805"
 
-    // 🎁 Os 5 códigos promocionais de teste para presente (60 dias cada)
-    val PROMO_CODES_60_DAYS = setOf("3301", "3302", "3303", "3304", "3305")
+    // 🎁 Os 7 códigos promocionais de teste para presente (60 dias cada)
+    val PROMO_CODES_60_DAYS = setOf("3301", "3302", "3303", "3304", "3305", "3306", "3307")
 
     private val ASAAS_API_TOKEN by lazy {
         val h = "24616163745F70726F645F3030304D7a6B774F4441324D5759324F474D334D57526C4D4455324E574D334D7a4A6c4E7a5A6d4E475A685A4759364F6D526A593249325A5442694C5751354F5445744E47566c4E6930344D44466c4C54557a4E5467794E4463315A4445354D546F364A474668593268664D3255784E324D7a4D444D744E4745334E6930304F5751794C5749795A6A55744D7a45794D7a6B305A5449784D7a4D79"
