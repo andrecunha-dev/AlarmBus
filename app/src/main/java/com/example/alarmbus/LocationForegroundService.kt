@@ -12,10 +12,12 @@ import android.location.Location
 import android.os.Build
 import android.os.IBinder
 import android.os.Looper
+import android.os.PowerManager
 import android.util.Log
 import androidx.core.app.NotificationCompat
 import androidx.core.content.ContextCompat
 import com.google.android.gms.location.FusedLocationProviderClient
+import com.google.android.gms.location.Granularity
 import com.google.android.gms.location.LocationCallback
 import com.google.android.gms.location.LocationRequest
 import com.google.android.gms.location.LocationResult
@@ -32,13 +34,14 @@ import java.net.URL
 
 /**
  * Serviço em primeiro plano responsável por monitorar a localização do dispositivo em segundo plano,
- * calcular a distância até o destino e acionar o alarme quando o usuário estiver próximo.
+ * manter a CPU ativa com WakeLock para evitar travamentos pelo Modo Doze e acionar o alarme.
  */
 class LocationForegroundService : Service() {
 
     private lateinit var fusedLocationClient: FusedLocationProviderClient
     private lateinit var locationCallback: LocationCallback
     private lateinit var notificationManager: NotificationManager
+    private var wakeLock: PowerManager.WakeLock? = null
 
     private val serviceJob = Job()
     private val serviceScope = CoroutineScope(Dispatchers.IO + serviceJob)
@@ -56,6 +59,16 @@ class LocationForegroundService : Service() {
         fusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
         notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         createNotificationChannels()
+
+        // Adquire WakeLock parcial para impedi que o Android congele o GPS no bolso (Modo Doze)
+        try {
+            val powerManager = getSystemService(Context.POWER_SERVICE) as PowerManager
+            wakeLock = powerManager.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "AlarmBus::GPSWakeLock").apply {
+                acquire(120 * 60 * 1000L) // Mantém CPU acordada por até 2 horas
+            }
+        } catch (e: Exception) {
+            Log.e("LocationService", "Erro ao adquirir WakeLock", e)
+        }
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -147,8 +160,11 @@ class LocationForegroundService : Service() {
     }
 
     private fun startLocationTracking() {
-        val locationRequest = LocationRequest.Builder(Priority.PRIORITY_HIGH_ACCURACY, 2000L)
+        val locationRequest = LocationRequest.Builder(Priority.PRIORITY_HIGH_ACCURACY, 1000L)
             .setMinUpdateIntervalMillis(1000L)
+            .setMinUpdateDistanceMeters(0f)
+            .setGranularity(Granularity.GRANULARITY_FINE)
+            .setWaitForAccurateLocation(false)
             .build()
 
         locationCallback = object : LocationCallback() {
@@ -204,8 +220,8 @@ class LocationForegroundService : Service() {
                 val url = URL(urlString)
                 val conn = (url.openConnection() as HttpURLConnection).apply {
                     setRequestProperty("User-Agent", "AlarmBusGPS/1.0")
-                    connectTimeout = 3000
-                    readTimeout = 3000
+                    connectTimeout = 2000
+                    readTimeout = 2000
                 }
                 if (conn.responseCode == 200) {
                     val jsonText = conn.inputStream.bufferedReader().use { it.readText() }
@@ -262,6 +278,13 @@ class LocationForegroundService : Service() {
     override fun onDestroy() {
         super.onDestroy()
         serviceJob.cancel()
+        try {
+            if (wakeLock?.isHeld == true) {
+                wakeLock?.release()
+            }
+        } catch (e: Exception) {
+            Log.e("LocationService", "Erro ao liberar WakeLock", e)
+        }
         if (::locationCallback.isInitialized) {
             fusedLocationClient.removeLocationUpdates(locationCallback)
         }
