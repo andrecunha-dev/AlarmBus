@@ -46,14 +46,17 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.DirectionsBus
 import androidx.compose.material.icons.filled.FiberManualRecord
+import androidx.compose.material.icons.filled.GpsFixed
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Map
+import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.MyLocation
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.NotificationsActive
@@ -83,6 +86,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -132,6 +136,7 @@ import java.io.IOException
 import java.net.URL
 import org.json.JSONObject
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlin.math.roundToInt
 
@@ -383,6 +388,7 @@ class MainActivity : ComponentActivity() {
     @Composable
     private fun AppContent() {
         val context = LocalContext.current
+        val scope = rememberCoroutineScope()
         val scrollState = rememberScrollState()
         val purpleColor = Color(0xFF6750A4)
         val lightPurple = Color(0xFFF3F0F8)
@@ -392,7 +398,71 @@ class MainActivity : ComponentActivity() {
         var showSubscriptionDialog by remember { mutableStateOf(false) }
         var showAdminPanelDialog by remember { mutableStateOf(false) }
         var showItineraryRecorderDialog by remember { mutableStateOf(false) }
+        var showRecordPromptDialog by remember { mutableStateOf(false) }
         var updateInfoState by remember { mutableStateOf<UpdateManager.UpdateInfo?>(null) }
+
+        if (showRecordPromptDialog) {
+            Dialog(
+                onDismissRequest = { showRecordPromptDialog = false },
+                properties = DialogProperties(usePlatformDefaultWidth = false)
+            ) {
+                Surface(
+                    shape = RoundedCornerShape(16.dp),
+                    color = Color.White,
+                    modifier = Modifier.fillMaxWidth(0.9f).padding(16.dp)
+                ) {
+                    Column(
+                        modifier = Modifier.padding(20.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Icon(Icons.Default.DirectionsBus, contentDescription = null, tint = purpleColor, modifier = Modifier.size(36.dp))
+                        Spacer(modifier = Modifier.height(10.dp))
+                        Text(
+                            text = "Deseja gravar o trajeto?",
+                            fontSize = 18.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color.Black
+                        )
+                        Spacer(modifier = Modifier.height(6.dp))
+                        Text(
+                            text = "Você pode gravar o itinerário deste fretado em tempo real via GPS para reutilizar depois.",
+                            fontSize = 12.sp,
+                            color = Color.Gray,
+                            textAlign = TextAlign.Center
+                        )
+                        Spacer(modifier = Modifier.height(16.dp))
+                        Button(
+                            onClick = {
+                                showRecordPromptDialog = false
+                                showItineraryRecorderDialog = true
+                                alertaAtivo = true
+                                salvarConfiguracoes()
+                                iniciarMonitoramento()
+                            },
+                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFD32F2F)),
+                            shape = RoundedCornerShape(10.dp),
+                            modifier = Modifier.fillMaxWidth().height(46.dp)
+                        ) {
+                            Text("SIM, GRAVAR TRAJETO", fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                        }
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Button(
+                            onClick = {
+                                showRecordPromptDialog = false
+                                alertaAtivo = true
+                                salvarConfiguracoes()
+                                iniciarMonitoramento()
+                            },
+                            colors = ButtonDefaults.buttonColors(containerColor = purpleColor),
+                            shape = RoundedCornerShape(10.dp),
+                            modifier = Modifier.fillMaxWidth().height(46.dp)
+                        ) {
+                            Text("NÃO, APENAS ALERTAR", fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                        }
+                    }
+                }
+            }
+        }
 
         if (showItineraryRecorderDialog) {
             ItineraryRecorderDialog(
@@ -471,6 +541,40 @@ class MainActivity : ComponentActivity() {
                     .padding(horizontal = 16.dp, vertical = 12.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
+                // Cabeçalho da TopBar com os 3 pontinhos para o Desenvolvedor Admin
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 4.dp, vertical = 4.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Default.DirectionsBus, contentDescription = null, tint = purpleColor, modifier = Modifier.size(24.dp))
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(text = "AlarmBus GPS", fontWeight = FontWeight.ExtraBold, fontSize = 18.sp, color = Color.Black)
+                    }
+
+                    IconButton(
+                        onClick = {
+                            if (LicenseManager.isDeveloperAdmin(context)) {
+                                showAdminPanelDialog = true
+                            } else {
+                                showSubscriptionDialog = true
+                            }
+                        }
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.MoreVert,
+                            contentDescription = "Opções do Desenvolvedor",
+                            tint = Color.DarkGray,
+                            modifier = Modifier.size(24.dp)
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(6.dp))
+
                 // 2. Card "Durma Tranquilo" com Imagem de Fundo
                 Card(
                     shape = RoundedCornerShape(12.dp),
@@ -491,31 +595,21 @@ class MainActivity : ComponentActivity() {
                         Column(
                             modifier = Modifier
                                 .fillMaxSize()
-                                .padding(start = 16.dp, top = 12.dp, end = 12.dp, bottom = 12.dp),
+                                .padding(start = 60.dp, top = 12.dp, end = 12.dp, bottom = 12.dp),
                             verticalArrangement = Arrangement.Center
                         ) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                androidx.compose.foundation.Image(
-                                    painter = androidx.compose.ui.res.painterResource(id = R.mipmap.ic_launcher_foreground),
-                                    contentDescription = "Logo AlarmBus",
-                                    modifier = Modifier.size(36.dp)
-                                )
-                                Spacer(modifier = Modifier.width(10.dp))
-                                Column {
-                                    Text(
-                                        text = "Durma Tranquilo",
-                                        fontSize = 17.sp,
-                                        fontWeight = FontWeight.ExtraBold,
-                                        color = Color(0xFF1A237E)
-                                    )
-                                    Text(
-                                        text = "Eu aviso quando estiver chegando.",
-                                        fontSize = 12.sp,
-                                        fontWeight = FontWeight.Bold,
-                                        color = Color(0xFF1A237E).copy(alpha = 0.9f)
-                                    )
-                                }
-                            }
+                            Text(
+                                text = "Durma Tranquilo",
+                                fontSize = 15.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = Color(0xFF1A237E)
+                            )
+                            Text(
+                                text = "Eu aviso quando estiver chegando.",
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = Color(0xFF1A237E).copy(alpha = 0.9f)
+                            )
                         }
                     }
                 }
@@ -598,24 +692,6 @@ class MainActivity : ComponentActivity() {
                                 )
                             }
                         }
-                        // Botão de Configurações do Desenvolvedor Admin
-                        IconButton(
-                            onClick = {
-                                if (LicenseManager.isDeveloperAdmin(context)) {
-                                    showAdminPanelDialog = true
-                                } else {
-                                    showSubscriptionDialog = true
-                                }
-                            },
-                            modifier = Modifier.size(32.dp)
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Settings,
-                                contentDescription = "Painel Admin Desenvolvedor",
-                                tint = purpleColor,
-                                modifier = Modifier.size(20.dp)
-                            )
-                        }
                         // Botão ENTER / CONFIRMAR BUSCA no campo de texto
                         IconButton(
                             onClick = {
@@ -635,22 +711,19 @@ class MainActivity : ComponentActivity() {
 
                 Spacer(modifier = Modifier.height(8.dp))
 
-                // Botão de Ação Rápida: "Escolher no Google Maps"
-                Surface(
-                    shape = RoundedCornerShape(8.dp),
-                    color = lightPurple,
+                // Botão de Ação Rápida: "Escolher no Google Maps" (Alto Contraste)
+                Button(
+                    onClick = { showMapPicker = true },
+                    colors = ButtonDefaults.buttonColors(containerColor = purpleColor),
+                    shape = RoundedCornerShape(10.dp),
                     modifier = Modifier
                         .fillMaxWidth()
-                        .clickable { showMapPicker = true }
+                        .height(46.dp)
                 ) {
-                    Row(
-                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.Center
-                    ) {
-                        Icon(Icons.Default.Map, contentDescription = null, tint = purpleColor, modifier = Modifier.size(18.dp))
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Default.Map, contentDescription = null, tint = Color.White, modifier = Modifier.size(18.dp))
                         Spacer(modifier = Modifier.width(8.dp))
-                        Text(text = "Escolher no Google Maps", fontSize = 12.sp, fontWeight = FontWeight.Medium, color = purpleColor)
+                        Text(text = "Escolher no Google Maps", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = Color.White)
                     }
                 }
 
@@ -991,6 +1064,35 @@ class MainActivity : ComponentActivity() {
                         }
                     }
 
+                    // Botão "Centralizar" no Canto Superior Direito do Mapa
+                    Surface(
+                        shape = RoundedCornerShape(14.dp),
+                        color = Color.White,
+                        shadowElevation = 4.dp,
+                        modifier = Modifier
+                            .align(Alignment.TopEnd)
+                            .padding(8.dp)
+                            .clickable {
+                                scope.launch {
+                                    cameraPositionState.animate(
+                                        CameraUpdateFactory.newLatLngZoom(
+                                            LatLng(localAtualLat, localAtualLng),
+                                            16f
+                                        )
+                                    )
+                                }
+                            }
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(Icons.Default.GpsFixed, contentDescription = "Centralizar GPS", tint = purpleColor, modifier = Modifier.size(14.dp))
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text(text = "Centralizar", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = purpleColor)
+                        }
+                    }
+
                     // Botão para Alternar entre Mapa Padrão e Satélite (Canto inferior esquerdo)
                     Surface(
                         shape = RoundedCornerShape(14.dp),
@@ -1089,7 +1191,7 @@ class MainActivity : ComponentActivity() {
 
                 Spacer(modifier = Modifier.height(14.dp))
 
-                // 9. Configurações de Som, Vibração, Volume Máximo e Slider
+                // 9. Configurações de Som, Vibração e Volume (Layout Lado a Lado idêntico à imagem)
                 Text(
                     text = "Como deseja ser avisado?",
                     modifier = Modifier.fillMaxWidth(),
@@ -1098,41 +1200,68 @@ class MainActivity : ComponentActivity() {
                     fontSize = 14.sp
                 )
                 Spacer(modifier = Modifier.height(8.dp))
-                Card(
-                    shape = RoundedCornerShape(12.dp),
-                    colors = CardDefaults.cardColors(containerColor = Color.White),
-                    modifier = Modifier.fillMaxWidth(),
-                    elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
-                ) {
-                    Column {
-                        // Som
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clickable { escolherToque() }
-                                .padding(horizontal = 14.dp, vertical = 10.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Icon(Icons.Default.VolumeUp, contentDescription = null, tint = purpleColor, modifier = Modifier.size(20.dp))
-                            Spacer(modifier = Modifier.width(12.dp))
-                            Column(modifier = Modifier.weight(1f)) {
-                                Text(text = "Som do Alarme", fontWeight = FontWeight.Bold, fontSize = 13.sp)
-                                Text(text = "Escolher toque de alarme", fontSize = 11.sp, color = Color.Gray)
-                            }
-                            Icon(Icons.Default.KeyboardArrowRight, contentDescription = null, tint = Color.LightGray, modifier = Modifier.size(18.dp))
-                        }
-                        Box(modifier = Modifier.fillMaxWidth().height(1.dp).background(Color(0xFFF0F0F0)))
 
-                        // Vibração
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    // Card Lado Esquerdo: Som do Alarme
+                    Card(
+                        shape = RoundedCornerShape(14.dp),
+                        colors = CardDefaults.cardColors(containerColor = Color(0xFFF3F0F8)),
+                        border = androidx.compose.foundation.BorderStroke(1.dp, purpleColor.copy(alpha = 0.3f)),
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(64.dp)
+                            .clickable { escolherToque() }
+                    ) {
                         Row(
                             modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = 14.dp, vertical = 8.dp),
+                                .fillMaxSize()
+                                .padding(horizontal = 10.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Icon(Icons.Default.Vibration, contentDescription = null, tint = purpleColor, modifier = Modifier.size(20.dp))
-                            Spacer(modifier = Modifier.width(12.dp))
-                            Text(text = "Vibração", fontWeight = FontWeight.Bold, fontSize = 13.sp, modifier = Modifier.weight(1f))
+                            Icon(Icons.Default.CheckCircle, contentDescription = null, tint = purpleColor, modifier = Modifier.size(16.dp))
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Surface(
+                                shape = CircleShape,
+                                color = purpleColor.copy(alpha = 0.15f),
+                                modifier = Modifier.size(28.dp)
+                            ) {
+                                Box(contentAlignment = Alignment.Center) {
+                                    Icon(Icons.Default.VolumeUp, contentDescription = null, tint = purpleColor, modifier = Modifier.size(16.dp))
+                                }
+                            }
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(text = "Som do Alarme", fontWeight = FontWeight.Bold, fontSize = 11.sp, color = Color.Black)
+                                Text(text = "Padrão", fontSize = 10.sp, color = Color.Gray, maxLines = 1)
+                            }
+                            Icon(Icons.Default.KeyboardArrowRight, contentDescription = null, tint = purpleColor, modifier = Modifier.size(16.dp))
+                        }
+                    }
+
+                    // Card Lado Direito: Vibração + Switch
+                    Card(
+                        shape = RoundedCornerShape(14.dp),
+                        colors = CardDefaults.cardColors(containerColor = Color(0xFFF8F6FA)),
+                        border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFE0E0E0)),
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(64.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .padding(horizontal = 10.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(Icons.Default.Vibration, contentDescription = null, tint = purpleColor, modifier = Modifier.size(20.dp))
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text(text = "Vibração", fontWeight = FontWeight.Bold, fontSize = 11.sp, color = Color.Black)
+                            }
                             Switch(
                                 checked = vibracaoAtiva,
                                 onCheckedChange = {
@@ -1141,37 +1270,58 @@ class MainActivity : ComponentActivity() {
                                 }
                             )
                         }
-                        Box(modifier = Modifier.fillMaxWidth().height(1.dp).background(Color(0xFFF0F0F0)))
+                    }
+                }
 
-                        // Slider do Volume
-                        Column(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = 14.dp, vertical = 8.dp)
+                Spacer(modifier = Modifier.height(10.dp))
+
+                // Barra de Volume
+                Card(
+                    shape = RoundedCornerShape(14.dp),
+                    colors = CardDefaults.cardColors(containerColor = Color(0xFFF8F6FA)),
+                    border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFE0E0E0)),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 14.dp, vertical = 10.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
                         ) {
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Text(text = "Nível do Volume do Alarme", fontWeight = FontWeight.Bold, fontSize = 13.sp)
-                                Text(
-                                    text = "${volumeNivel.roundToInt()}%",
-                                    fontWeight = FontWeight.Bold,
-                                    color = purpleColor,
-                                    fontSize = 13.sp
-                                )
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Surface(
+                                    shape = CircleShape,
+                                    color = purpleColor.copy(alpha = 0.15f),
+                                    modifier = Modifier.size(28.dp)
+                                ) {
+                                    Box(contentAlignment = Alignment.Center) {
+                                        Icon(Icons.Default.VolumeUp, contentDescription = null, tint = purpleColor, modifier = Modifier.size(16.dp))
+                                    }
+                                }
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(text = "Volume do Alarme", fontWeight = FontWeight.Bold, fontSize = 12.sp, color = Color.Black)
                             }
-                            Slider(
-                                value = volumeNivel,
-                                onValueChange = { newVol ->
-                                    volumeNivel = newVol
-                                    salvarConfiguracoes()
-                                },
-                                valueRange = 0f..100f,
-                                steps = 9
+                            Text(
+                                text = "${volumeNivel.roundToInt()}%",
+                                fontWeight = FontWeight.Bold,
+                                color = purpleColor,
+                                fontSize = 12.sp
                             )
                         }
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Slider(
+                            value = volumeNivel,
+                            onValueChange = { newVol ->
+                                volumeNivel = newVol
+                                salvarConfiguracoes()
+                            },
+                            valueRange = 0f..100f,
+                            steps = 9
+                        )
                     }
                 }
 
@@ -1233,12 +1383,11 @@ class MainActivity : ComponentActivity() {
                             return@Button
                         }
 
-                        alertaAtivo = !alertaAtivo
-                        salvarConfiguracoes()
-
-                        if (alertaAtivo) {
-                            iniciarMonitoramento()
+                        if (!alertaAtivo) {
+                            showRecordPromptDialog = true
                         } else {
+                            alertaAtivo = false
+                            salvarConfiguracoes()
                             pararMonitoramento()
                         }
                     },

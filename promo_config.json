@@ -1,8 +1,8 @@
 {
   "price": 7.90,
   "days": 30,
-  "latestVersionCode": 9,
-  "latestVersionName": "2.0",
+  "latestVersionCode": 10,
+  "latestVersionName": "2.1",
   "apkDownloadUrl": "https://raw.githubusercontent.com/andrecunha-dev/AlarmBus/main/AlarmBus.apk",
-  "updateNotes": "Precisão exata de distância (ex: 15,543 km), gravação de itinerários de fretado e correção de zoom no mapa."
+  "updateNotes": "Redesign dos botões de áudio/vibração, botão Centralizar no mapa, 3 pontinhos e diálogo de gravação ao ativar alerta."
 }
