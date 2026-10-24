@@ -541,6 +541,33 @@ class MainActivity : ComponentActivity() {
                     .padding(horizontal = 16.dp, vertical = 12.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
+                // 1. 3 Pontinhos no Canto Superior Esquerdo acima do Card "Durma Tranquilo"
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 2.dp),
+                    horizontalArrangement = Arrangement.Start,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    IconButton(
+                        onClick = {
+                            if (LicenseManager.isDeveloperAdmin(context)) {
+                                showAdminPanelDialog = true
+                            } else {
+                                showSubscriptionDialog = true
+                            }
+                        },
+                        modifier = Modifier.size(28.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.MoreHoriz,
+                            contentDescription = "Painel Admin Desenvolvedor",
+                            tint = purpleColor,
+                            modifier = Modifier.size(24.dp)
+                        )
+                    }
+                }
+
                 // 2. Card "Durma Tranquilo" com Imagem de Fundo
                 Card(
                     shape = RoundedCornerShape(12.dp),
@@ -657,24 +684,6 @@ class MainActivity : ComponentActivity() {
                                     modifier = Modifier.size(18.dp)
                                 )
                             }
-                        }
-                        // Botão 3 Pontinhos na Horizontal (MoreHoriz) no Canto da Barra de Busca
-                        IconButton(
-                            onClick = {
-                                if (LicenseManager.isDeveloperAdmin(context)) {
-                                    showAdminPanelDialog = true
-                                } else {
-                                    showSubscriptionDialog = true
-                                }
-                            },
-                            modifier = Modifier.size(32.dp)
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.MoreHoriz,
-                                contentDescription = "Painel Admin Desenvolvedor",
-                                tint = purpleColor,
-                                modifier = Modifier.size(22.dp)
-                            )
                         }
                         // Botão ENTER / CONFIRMAR BUSCA no campo de texto
                         IconButton(
@@ -968,15 +977,47 @@ class MainActivity : ComponentActivity() {
                         }
                     }
 
-                    // Botão "Centralizar" no Canto Superior Direito do Mapa
-                    Surface(
-                        shape = RoundedCornerShape(14.dp),
-                        color = Color.White,
-                        shadowElevation = 4.dp,
+                    // Botões no Canto Inferior Esquerdo (Padrão/Satélite + Centralizar)
+                    Row(
                         modifier = Modifier
-                            .align(Alignment.TopEnd)
-                            .padding(8.dp)
-                            .clickable {
+                            .align(Alignment.BottomStart)
+                            .padding(8.dp),
+                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        // Botão para Alternar entre Mapa Padrão e Satélite
+                        Surface(
+                            shape = RoundedCornerShape(14.dp),
+                            color = if (isSatelliteMap) purpleColor else Color.White.copy(alpha = 0.95f),
+                            shadowElevation = 3.dp,
+                            modifier = Modifier.clickable { isSatelliteMap = !isSatelliteMap }
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Map,
+                                    contentDescription = "Tipo de mapa",
+                                    tint = if (isSatelliteMap) Color.White else purpleColor,
+                                    modifier = Modifier.size(12.dp)
+                                )
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text(
+                                    text = if (isSatelliteMap) "Satélite" else "Padrão",
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = if (isSatelliteMap) Color.White else Color.Black
+                                )
+                            }
+                        }
+
+                        // Botão Centralizar ao Lado do Botão Padrão/Satélite
+                        Surface(
+                            shape = RoundedCornerShape(14.dp),
+                            color = Color.White.copy(alpha = 0.95f),
+                            shadowElevation = 3.dp,
+                            modifier = Modifier.clickable {
                                 scope.launch {
                                     cameraPositionState.animate(
                                         CameraUpdateFactory.newLatLngZoom(
@@ -986,44 +1027,25 @@ class MainActivity : ComponentActivity() {
                                     )
                                 }
                             }
-                    ) {
-                        Row(
-                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
-                            verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Icon(Icons.Default.GpsFixed, contentDescription = "Centralizar GPS", tint = purpleColor, modifier = Modifier.size(14.dp))
-                            Spacer(modifier = Modifier.width(4.dp))
-                            Text(text = "Centralizar", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = purpleColor)
-                        }
-                    }
-
-                    // Botão para Alternar entre Mapa Padrão e Satélite (Canto inferior esquerdo)
-                    Surface(
-                        shape = RoundedCornerShape(14.dp),
-                        color = if (isSatelliteMap) purpleColor else Color.White.copy(alpha = 0.95f),
-                        shadowElevation = 3.dp,
-                        modifier = Modifier
-                            .align(Alignment.BottomStart)
-                            .padding(8.dp)
-                            .clickable { isSatelliteMap = !isSatelliteMap }
-                    ) {
-                        Row(
-                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Map,
-                                contentDescription = "Tipo de mapa",
-                                tint = if (isSatelliteMap) Color.White else purpleColor,
-                                modifier = Modifier.size(12.dp)
-                            )
-                            Spacer(modifier = Modifier.width(4.dp))
-                            Text(
-                                text = if (isSatelliteMap) "Satélite" else "Padrão",
-                                fontSize = 11.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = if (isSatelliteMap) Color.White else Color.Black
-                            )
+                            Row(
+                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.GpsFixed,
+                                    contentDescription = "Centralizar GPS",
+                                    tint = purpleColor,
+                                    modifier = Modifier.size(12.dp)
+                                )
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text(
+                                    text = "Centralizar",
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = purpleColor
+                                )
+                            }
                         }
                     }
 

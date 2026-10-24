@@ -1,8 +1,8 @@
 {
   "price": 7.90,
   "days": 30,
-  "latestVersionCode": 11,
-  "latestVersionName": "2.2",
+  "latestVersionCode": 12,
+  "latestVersionName": "2.3",
   "apkDownloadUrl": "https://raw.githubusercontent.com/andrecunha-dev/AlarmBus/main/AlarmBus.apk",
-  "updateNotes": "Remoção do card de gravação da tela principal, 3 pontinhos horizontais na busca e pergunta de gravação ao ativar alerta."
+  "updateNotes": "Posicionamento dos 3 pontinhos no canto superior esquerdo e botão Centralizar ao lado do botão Padrão."
 }
