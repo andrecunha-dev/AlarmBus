@@ -4,10 +4,14 @@ import android.content.Context
 import android.content.SharedPreferences
 import org.json.JSONArray
 import org.json.JSONObject
+import java.io.File
+import java.util.Locale
+import kotlin.math.roundToInt
 
 data class LatLngData(
     val latitude: Double,
-    val longitude: Double
+    val longitude: Double,
+    val timestamp: Long = System.currentTimeMillis()
 )
 
 data class Itinerary(
@@ -16,7 +20,9 @@ data class Itinerary(
     val startAddress: String,
     val endAddress: String,
     val waypoints: List<LatLngData>,
-    val dateCreated: String
+    val dateCreated: String,
+    val totalDistanceMeters: Double = 0.0,
+    val durationSeconds: Long = 0L
 )
 
 object ItineraryManager {
@@ -24,9 +30,26 @@ object ItineraryManager {
     private const val PREFS_NAME = "alarmbus_itineraries"
     private const val KEY_ITINERARY_LIST = "itinerary_list_json"
     private const val KEY_ACTIVE_ITINERARY_ID = "active_itinerary_id"
+    private const val KEY_IS_RECORDING = "is_recording_itinerary"
+    private const val KEY_RECORDING_NAME = "recording_itinerary_name"
 
     private fun getPrefs(context: Context): SharedPreferences {
         return context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+    }
+
+    fun isRecording(context: Context): Boolean {
+        return getPrefs(context).getBoolean(KEY_IS_RECORDING, false)
+    }
+
+    fun setRecording(context: Context, recording: Boolean, name: String = "Fretado Empresa → Casa") {
+        getPrefs(context).edit()
+            .putBoolean(KEY_IS_RECORDING, recording)
+            .putString(KEY_RECORDING_NAME, name)
+            .apply()
+    }
+
+    fun getRecordingName(context: Context): String {
+        return getPrefs(context).getString(KEY_RECORDING_NAME, "Fretado Empresa → Casa") ?: "Fretado Empresa → Casa"
     }
 
     fun getItineraries(context: Context): List<Itinerary> {
@@ -38,9 +61,11 @@ object ItineraryManager {
                 val obj = array.getJSONObject(i)
                 val id = obj.getString("id")
                 val name = obj.getString("name")
-                val startAddress = obj.optString("startAddress", "")
-                val endAddress = obj.optString("endAddress", "")
+                val startAddress = obj.optString("startAddress", "Origem Registrada")
+                val endAddress = obj.optString("endAddress", "Destino Registrado")
                 val dateCreated = obj.optString("dateCreated", "")
+                val totalDist = obj.optDouble("totalDistanceMeters", 0.0)
+                val durationSec = obj.optLong("durationSeconds", 0L)
 
                 val waypointsArray = obj.optJSONArray("waypoints") ?: JSONArray()
                 val waypoints = mutableListOf<LatLngData>()
@@ -49,7 +74,8 @@ object ItineraryManager {
                     waypoints.add(
                         LatLngData(
                             latitude = wObj.getDouble("lat"),
-                            longitude = wObj.getDouble("lng")
+                            longitude = wObj.getDouble("lng"),
+                            timestamp = wObj.optLong("ts", System.currentTimeMillis())
                         )
                     )
                 }
@@ -61,7 +87,9 @@ object ItineraryManager {
                         startAddress = startAddress,
                         endAddress = endAddress,
                         waypoints = waypoints,
-                        dateCreated = dateCreated
+                        dateCreated = dateCreated,
+                        totalDistanceMeters = if (totalDist > 0.0) totalDist else calculateTotalDistance(waypoints),
+                        durationSeconds = durationSec
                     )
                 )
             }
@@ -77,6 +105,16 @@ object ItineraryManager {
         currentList.add(0, itinerary)
 
         saveAllItineraries(context, currentList)
+    }
+
+    fun renameItinerary(context: Context, id: String, newName: String) {
+        val currentList = getItineraries(context).toMutableList()
+        val index = currentList.indexOfFirst { it.id == id }
+        if (index != -1) {
+            val old = currentList[index]
+            currentList[index] = old.copy(name = newName)
+            saveAllItineraries(context, currentList)
+        }
     }
 
     fun deleteItinerary(context: Context, id: String) {
@@ -111,12 +149,15 @@ object ItineraryManager {
                 put("startAddress", item.startAddress)
                 put("endAddress", item.endAddress)
                 put("dateCreated", item.dateCreated)
+                put("totalDistanceMeters", item.totalDistanceMeters)
+                put("durationSeconds", item.durationSeconds)
 
                 val waypointsArray = JSONArray()
                 for (wp in item.waypoints) {
                     val wObj = JSONObject().apply {
                         put("lat", wp.latitude)
                         put("lng", wp.longitude)
+                        put("ts", wp.timestamp)
                     }
                     waypointsArray.put(wObj)
                 }
@@ -125,6 +166,31 @@ object ItineraryManager {
             array.put(obj)
         }
         getPrefs(context).edit().putString(KEY_ITINERARY_LIST, array.toString()).apply()
+    }
+
+    fun calculateTotalDistance(waypoints: List<LatLngData>): Double {
+        if (waypoints.size < 2) return 0.0
+        var total = 0.0
+        for (i in 0 until waypoints.size - 1) {
+            total += distanceBetween(waypoints[i], waypoints[i + 1])
+        }
+        return total
+    }
+
+    fun formatDistance(meters: Double): String {
+        return if (meters >= 1000.0) {
+            String.format(Locale("pt", "BR"), "%.3f km", meters / 1000.0)
+        } else {
+            "${meters.roundToInt()} m"
+        }
+    }
+
+    fun formatDuration(seconds: Long): String {
+        if (seconds <= 0) return "--"
+        val mins = seconds / 60
+        val hrs = mins / 60
+        val remMins = mins % 60
+        return if (hrs > 0) "${hrs}h ${remMins}min" else "${remMins}min"
     }
 
     fun calculateRemainingDistanceAlongItinerary(
@@ -151,6 +217,30 @@ object ItineraryManager {
         }
 
         return totalRemaining
+    }
+
+    fun exportToGpx(context: Context, itinerary: Itinerary): File {
+        val gpxDir = File(context.cacheDir, "gpx")
+        gpxDir.mkdirs()
+        val file = File(gpxDir, "${itinerary.name.replace("[^a-zA-Z0-9]".toRegex(), "_")}.gpx")
+
+        val sb = StringBuilder()
+        sb.append("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n")
+        sb.append("<gpx version=\"1.1\" creator=\"AlarmBus GPS\">\n")
+        sb.append("  <trk>\n")
+        sb.append("    <name>").append(itinerary.name).append("</name>\n")
+        sb.append("    <trkseg>\n")
+
+        for (wp in itinerary.waypoints) {
+            sb.append("      <trkpt lat=\"").append(wp.latitude).append("\" lon=\"").append(wp.longitude).append("\"/>\n")
+        }
+
+        sb.append("    </trkseg>\n")
+        sb.append("  </trk>\n")
+        sb.append("</gpx>")
+
+        file.writeText(sb.toString())
+        return file
     }
 
     private fun distanceBetween(p1: LatLngData, p2: LatLngData): Double {

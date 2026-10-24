@@ -1,8 +1,8 @@
 {
   "price": 7.90,
   "days": 30,
-  "latestVersionCode": 13,
-  "latestVersionName": "2.4",
+  "latestVersionCode": 14,
+  "latestVersionName": "3.0",
   "apkDownloadUrl": "https://raw.githubusercontent.com/andrecunha-dev/AlarmBus/main/AlarmBus.apk",
-  "updateNotes": "Redução da altura do card de volume e adição de espaçamento para o botão de ativar alerta."
+  "updateNotes": "Gerenciador Meus Trajetos, indicador ● REC piscante, câmera com acompanhamento suave e exportação GPX."
 }

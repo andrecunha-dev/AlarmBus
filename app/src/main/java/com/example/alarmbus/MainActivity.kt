@@ -398,8 +398,31 @@ class MainActivity : ComponentActivity() {
         var showSubscriptionDialog by remember { mutableStateOf(false) }
         var showAdminPanelDialog by remember { mutableStateOf(false) }
         var showItineraryRecorderDialog by remember { mutableStateOf(false) }
+        var showMeusTrajetosDialog by remember { mutableStateOf(false) }
         var showRecordPromptDialog by remember { mutableStateOf(false) }
         var updateInfoState by remember { mutableStateOf<UpdateManager.UpdateInfo?>(null) }
+
+        if (showMeusTrajetosDialog) {
+            MeusTrajetosDialog(
+                onDismiss = { showMeusTrajetosDialog = false },
+                onSelectItinerary = { itin, isFollowOnly ->
+                    showMeusTrajetosDialog = false
+                    ItineraryManager.setActiveItineraryId(context, itin.id)
+                    if (!isFollowOnly) {
+                        val lastWp = itin.waypoints.lastOrNull()
+                        if (lastWp != null) {
+                            destinoLatitude = lastWp.latitude
+                            destinoLongitude = lastWp.longitude
+                            enderecoPesquisado = itin.name
+                            salvarConfiguracoes()
+                            alertaAtivo = true
+                            iniciarMonitoramento()
+                        }
+                    }
+                    Toast.makeText(context, "Exibindo trajeto \"${itin.name}\"", Toast.LENGTH_SHORT).show()
+                }
+            )
+        }
 
         if (showRecordPromptDialog) {
             Dialog(
@@ -541,12 +564,12 @@ class MainActivity : ComponentActivity() {
                     .padding(horizontal = 16.dp, vertical = 12.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                // 1. 3 Pontinhos no Canto Superior Esquerdo acima do Card "Durma Tranquilo"
+                // 1. TopBar com 3 Pontinhos Admin e Botão "Meus Trajetos"
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(bottom = 2.dp),
-                    horizontalArrangement = Arrangement.Start,
+                    horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     IconButton(
@@ -566,6 +589,25 @@ class MainActivity : ComponentActivity() {
                             modifier = Modifier.size(24.dp)
                         )
                     }
+
+                    Surface(
+                        shape = RoundedCornerShape(12.dp),
+                        color = purpleColor.copy(alpha = 0.12f),
+                        modifier = Modifier.clickable { showMeusTrajetosDialog = true }
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(Icons.Default.DirectionsBus, contentDescription = null, tint = purpleColor, modifier = Modifier.size(14.dp))
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text(text = "Meus Trajetos", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = purpleColor)
+                        }
+                    }
+                }
+
+                if (ItineraryManager.isRecording(context)) {
+                    RecIndicator()
                 }
 
                 // 2. Card "Durma Tranquilo" com Imagem de Fundo
@@ -1742,6 +1784,46 @@ fun MapPickerDialog(
                     }
                 }
             }
+        }
+    }
+}
+
+@Composable
+fun RecIndicator() {
+    val infiniteTransition = rememberInfiniteTransition(label = "rec_blink")
+    val alpha by infiniteTransition.animateFloat(
+        initialValue = 0.2f,
+        targetValue = 1f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(800, easing = LinearEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "alpha"
+    )
+
+    Surface(
+        shape = RoundedCornerShape(12.dp),
+        color = Color(0xFFFFEBEE),
+        border = androidx.compose.foundation.BorderStroke(1.dp, Color.Red),
+        modifier = Modifier.padding(vertical = 4.dp)
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(10.dp)
+                    .clip(CircleShape)
+                    .background(Color.Red.copy(alpha = alpha))
+            )
+            Spacer(modifier = Modifier.width(6.dp))
+            Text(
+                text = "● REC GRAVANDO TRAJETO",
+                color = Color.Red,
+                fontSize = 11.sp,
+                fontWeight = FontWeight.ExtraBold
+            )
         }
     }
 }
