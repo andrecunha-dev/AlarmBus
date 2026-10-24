@@ -618,10 +618,6 @@ class MainActivity : ComponentActivity() {
                     }
                 }
 
-                if (ItineraryManager.isRecording(context)) {
-                    RecIndicator()
-                }
-
                 // 2. Card "Durma Tranquilo" com Imagem de Fundo
                 Card(
                     shape = RoundedCornerShape(12.dp),
@@ -1011,6 +1007,11 @@ class MainActivity : ComponentActivity() {
                                             color = Color.DarkGray,
                                             maxLines = 1
                                         )
+                                    }
+
+                                    // Indicador Discreto ● REC no Canto Direito do Card do Mapa (Imagem 2)
+                                    if (ItineraryManager.isRecording(context)) {
+                                        RecIndicatorDiscrete()
                                     }
                                 }
                             }
@@ -1822,8 +1823,8 @@ fun MapPickerDialog(
 }
 
 @Composable
-fun RecIndicator() {
-    val infiniteTransition = rememberInfiniteTransition(label = "rec_blink")
+fun RecIndicatorDiscrete() {
+    val infiniteTransition = rememberInfiniteTransition(label = "rec_blink_discrete")
     val alpha by infiniteTransition.animateFloat(
         initialValue = 0.2f,
         targetValue = 1f,
@@ -1834,29 +1835,22 @@ fun RecIndicator() {
         label = "alpha"
     )
 
-    Surface(
-        shape = RoundedCornerShape(12.dp),
-        color = Color(0xFFFFEBEE),
-        border = androidx.compose.foundation.BorderStroke(1.dp, Color.Red),
-        modifier = Modifier.padding(vertical = 4.dp)
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier.padding(start = 6.dp)
     ) {
-        Row(
-            modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Box(
-                modifier = Modifier
-                    .size(10.dp)
-                    .clip(CircleShape)
-                    .background(Color.Red.copy(alpha = alpha))
-            )
-            Spacer(modifier = Modifier.width(6.dp))
-            Text(
-                text = "● REC GRAVANDO TRAJETO",
-                color = Color.Red,
-                fontSize = 11.sp,
-                fontWeight = FontWeight.ExtraBold
-            )
-        }
+        Box(
+            modifier = Modifier
+                .size(8.dp)
+                .clip(CircleShape)
+                .background(Color.Red.copy(alpha = alpha))
+        )
+        Spacer(modifier = Modifier.width(4.dp))
+        Text(
+            text = "REC",
+            color = Color.Red,
+            fontSize = 12.sp,
+            fontWeight = FontWeight.ExtraBold
+        )
     }
 }

@@ -1,8 +1,8 @@
 {
   "price": 7.90,
   "days": 30,
-  "latestVersionCode": 15,
-  "latestVersionName": "3.1",
+  "latestVersionCode": 16,
+  "latestVersionName": "3.2",
   "apkDownloadUrl": "https://raw.githubusercontent.com/andrecunha-dev/AlarmBus/main/AlarmBus.apk",
-  "updateNotes": "Gravação de trajeto em segundo plano sem janela fixa, renderização do itinerário no mapa para Seguir Rota e salvamento automático."
+  "updateNotes": "Posicionamento do indicador REC discreto dentro do card do mapa."
 }
