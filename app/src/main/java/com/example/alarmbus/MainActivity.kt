@@ -1201,7 +1201,7 @@ class MainActivity : ComponentActivity() {
 
                 Spacer(modifier = Modifier.height(10.dp))
 
-                // Barra de Volume
+                // Barra de Volume (Altura reduzida com espaçamento)
                 Card(
                     shape = RoundedCornerShape(14.dp),
                     colors = CardDefaults.cardColors(containerColor = Color(0xFFF8F6FA)),
@@ -1211,7 +1211,7 @@ class MainActivity : ComponentActivity() {
                     Column(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(horizontal = 14.dp, vertical = 10.dp)
+                            .padding(horizontal = 14.dp, vertical = 6.dp)
                     ) {
                         Row(
                             modifier = Modifier.fillMaxWidth(),
@@ -1222,10 +1222,10 @@ class MainActivity : ComponentActivity() {
                                 Surface(
                                     shape = CircleShape,
                                     color = purpleColor.copy(alpha = 0.15f),
-                                    modifier = Modifier.size(28.dp)
+                                    modifier = Modifier.size(24.dp)
                                 ) {
                                     Box(contentAlignment = Alignment.Center) {
-                                        Icon(Icons.Default.VolumeUp, contentDescription = null, tint = purpleColor, modifier = Modifier.size(16.dp))
+                                        Icon(Icons.Default.VolumeUp, contentDescription = null, tint = purpleColor, modifier = Modifier.size(14.dp))
                                     }
                                 }
                                 Spacer(modifier = Modifier.width(8.dp))
@@ -1238,7 +1238,6 @@ class MainActivity : ComponentActivity() {
                                 fontSize = 12.sp
                             )
                         }
-                        Spacer(modifier = Modifier.height(4.dp))
                         Slider(
                             value = volumeNivel,
                             onValueChange = { newVol ->
@@ -1250,6 +1249,8 @@ class MainActivity : ComponentActivity() {
                         )
                     }
                 }
+
+                Spacer(modifier = Modifier.height(16.dp))
 
                 // Status da Assinatura Mensal (Exibido apenas quando desativada)
                 val isSubscribed = LicenseManager.isLicenseActive(context)
