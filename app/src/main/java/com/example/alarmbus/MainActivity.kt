@@ -77,6 +77,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
@@ -424,6 +425,8 @@ class MainActivity : ComponentActivity() {
             )
         }
 
+        var recordingNameInput by remember { mutableStateOf("Fretado - Ida ao Trabalho") }
+
         if (showRecordPromptDialog) {
             Dialog(
                 onDismissRequest = { showRecordPromptDialog = false },
@@ -448,25 +451,34 @@ class MainActivity : ComponentActivity() {
                         )
                         Spacer(modifier = Modifier.height(6.dp))
                         Text(
-                            text = "Você pode gravar o itinerário deste fretado em tempo real via GPS para reutilizar depois.",
+                            text = "O trajeto será gravado em segundo plano enquanto você viaja e salvo em Meus Trajetos ao desativar o alerta.",
                             fontSize = 12.sp,
                             color = Color.Gray,
                             textAlign = TextAlign.Center
                         )
+                        Spacer(modifier = Modifier.height(12.dp))
+                        OutlinedTextField(
+                            value = recordingNameInput,
+                            onValueChange = { recordingNameInput = it },
+                            label = { Text("Nome do Trajeto") },
+                            singleLine = true,
+                            modifier = Modifier.fillMaxWidth()
+                        )
                         Spacer(modifier = Modifier.height(16.dp))
                         Button(
                             onClick = {
+                                ItineraryManager.startLiveRecording(context, recordingNameInput.ifBlank { "Fretado - Ida ao Trabalho" })
                                 showRecordPromptDialog = false
-                                showItineraryRecorderDialog = true
                                 alertaAtivo = true
                                 salvarConfiguracoes()
                                 iniciarMonitoramento()
+                                Toast.makeText(context, "🔴 Gravação do trajeto iniciada! O indicador REC piscará no mapa.", Toast.LENGTH_SHORT).show()
                             },
                             colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFD32F2F)),
                             shape = RoundedCornerShape(10.dp),
                             modifier = Modifier.fillMaxWidth().height(46.dp)
                         ) {
-                            Text("SIM, GRAVAR TRAJETO", fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                            Text("SIM, INICIAR GRAVAÇÃO", fontWeight = FontWeight.Bold, fontSize = 13.sp)
                         }
                         Spacer(modifier = Modifier.height(8.dp))
                         Button(
@@ -938,6 +950,27 @@ class MainActivity : ComponentActivity() {
                             color = Color(0xFF1976D2),
                             width = 10f
                         )
+
+                        // Exibe Itinerário Gravado em Roxo no Mapa
+                        val activeItin = remember(alertaAtivo, showMeusTrajetosDialog) { ItineraryManager.getActiveItinerary(context) }
+                        if (activeItin != null && activeItin.waypoints.isNotEmpty()) {
+                            val itinLatLngs = remember(activeItin) {
+                                activeItin.waypoints.map { LatLng(it.latitude, it.longitude) }
+                            }
+                            Polyline(
+                                points = itinLatLngs,
+                                color = purpleColor,
+                                width = 12f
+                            )
+                            Marker(
+                                state = MarkerState(position = itinLatLngs.first()),
+                                title = "Ponto Inicial: ${activeItin.name}"
+                            )
+                            Marker(
+                                state = MarkerState(position = itinLatLngs.last()),
+                                title = "Destino Final: ${activeItin.name}"
+                            )
+                        }
 
                         // Círculo com o Raio do Alerta Real em Metros (300m, 500m, 750m, 1000m)
                         Circle(

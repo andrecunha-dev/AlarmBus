@@ -32,6 +32,8 @@ object ItineraryManager {
     private const val KEY_ACTIVE_ITINERARY_ID = "active_itinerary_id"
     private const val KEY_IS_RECORDING = "is_recording_itinerary"
     private const val KEY_RECORDING_NAME = "recording_itinerary_name"
+    private const val KEY_RECORDING_WAYPOINTS = "recording_waypoints_json"
+    private const val KEY_RECORDING_START_TIME = "recording_start_time"
 
     private fun getPrefs(context: Context): SharedPreferences {
         return context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
@@ -41,15 +43,90 @@ object ItineraryManager {
         return getPrefs(context).getBoolean(KEY_IS_RECORDING, false)
     }
 
-    fun setRecording(context: Context, recording: Boolean, name: String = "Fretado Empresa → Casa") {
+    fun startLiveRecording(context: Context, name: String) {
         getPrefs(context).edit()
-            .putBoolean(KEY_IS_RECORDING, recording)
+            .putBoolean(KEY_IS_RECORDING, true)
             .putString(KEY_RECORDING_NAME, name)
+            .putString(KEY_RECORDING_WAYPOINTS, "[]")
+            .putLong(KEY_RECORDING_START_TIME, System.currentTimeMillis())
             .apply()
     }
 
-    fun getRecordingName(context: Context): String {
-        return getPrefs(context).getString(KEY_RECORDING_NAME, "Fretado Empresa → Casa") ?: "Fretado Empresa → Casa"
+    fun addLiveWaypoint(context: Context, lat: Double, lng: Double) {
+        if (!isRecording(context)) return
+        val prefs = getPrefs(context)
+        val jsonStr = prefs.getString(KEY_RECORDING_WAYPOINTS, "[]") ?: "[]"
+        try {
+            val array = JSONArray(jsonStr)
+            if (array.length() > 0) {
+                val lastObj = array.getJSONObject(array.length() - 1)
+                val lastLat = lastObj.getDouble("lat")
+                val lastLng = lastObj.getDouble("lng")
+                val dist = FloatArray(1)
+                android.location.Location.distanceBetween(lastLat, lastLng, lat, lng, dist)
+                if (dist[0] < 10f) return
+            }
+
+            val newWp = JSONObject().apply {
+                put("lat", lat)
+                put("lng", lng)
+                put("ts", System.currentTimeMillis())
+            }
+            array.put(newWp)
+            prefs.edit().putString(KEY_RECORDING_WAYPOINTS, array.toString()).apply()
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+    }
+
+    fun stopAndSaveLiveRecording(context: Context): Itinerary? {
+        if (!isRecording(context)) return null
+        val prefs = getPrefs(context)
+        val name = prefs.getString(KEY_RECORDING_NAME, "Fretado Empresa → Casa") ?: "Fretado Empresa → Casa"
+        val jsonStr = prefs.getString(KEY_RECORDING_WAYPOINTS, "[]") ?: "[]"
+        val startTime = prefs.getLong(KEY_RECORDING_START_TIME, System.currentTimeMillis())
+        val durationSec = (System.currentTimeMillis() - startTime) / 1000L
+
+        prefs.edit()
+            .putBoolean(KEY_IS_RECORDING, false)
+            .remove(KEY_RECORDING_WAYPOINTS)
+            .remove(KEY_RECORDING_START_TIME)
+            .apply()
+
+        val waypoints = mutableListOf<LatLngData>()
+        try {
+            val array = JSONArray(jsonStr)
+            for (i in 0 until array.length()) {
+                val obj = array.getJSONObject(i)
+                waypoints.add(
+                    LatLngData(
+                        latitude = obj.getDouble("lat"),
+                        longitude = obj.getDouble("lng"),
+                        timestamp = obj.optLong("ts", System.currentTimeMillis())
+                    )
+                )
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+
+        if (waypoints.isEmpty()) return null
+
+        val totalDist = calculateTotalDistance(waypoints)
+        val itinerary = Itinerary(
+            id = System.currentTimeMillis().toString(),
+            name = name,
+            startAddress = "Ponto Inicial Registrado",
+            endAddress = "Ponto Final Registrado",
+            waypoints = waypoints,
+            dateCreated = java.text.SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.getDefault()).format(java.util.Date()),
+            totalDistanceMeters = totalDist,
+            durationSeconds = durationSec
+        )
+
+        saveItinerary(context, itinerary)
+        setActiveItineraryId(context, itinerary.id)
+        return itinerary
     }
 
     fun getItineraries(context: Context): List<Itinerary> {

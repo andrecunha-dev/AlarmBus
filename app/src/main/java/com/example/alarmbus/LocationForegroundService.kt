@@ -159,6 +159,9 @@ class LocationForegroundService : Service() {
         locationCallback = object : LocationCallback() {
             override fun onLocationResult(locationResult: LocationResult) {
                 val location = locationResult.lastLocation ?: return
+                if (ItineraryManager.isRecording(this@LocationForegroundService)) {
+                    ItineraryManager.addLiveWaypoint(this@LocationForegroundService, location.latitude, location.longitude)
+                }
                 verificarProximidade(location)
             }
         }
