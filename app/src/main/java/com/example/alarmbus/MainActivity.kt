@@ -357,6 +357,10 @@ class MainActivity : ComponentActivity() {
         toqueUri = AlarmPreferences.getToneUri(this) ?: RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM)
         alertaAtivo = AlarmPreferences.isAlarmActive(this)
 
+        if (!alertaAtivo) {
+            ItineraryManager.forceStopRecording(this)
+        }
+
         if (destinoLatitude != 0.0 && enderecoPesquisado.isNotBlank()) {
             mensagem = "Local selecionado: $enderecoPesquisado"
         }
@@ -1017,7 +1021,7 @@ class MainActivity : ComponentActivity() {
                                     }
 
                                     // Indicador Discreto ● REC no Canto Direito do Card do Mapa (Imagem 2)
-                                    if (ItineraryManager.isRecording(context)) {
+                                    if (alertaAtivo && ItineraryManager.isRecording(context)) {
                                         RecIndicatorDiscrete()
                                     }
                                 }
@@ -1575,6 +1579,7 @@ class MainActivity : ComponentActivity() {
 
             // Limpa o trajeto ativo do mapa para não ficar fixo
             ItineraryManager.setActiveItineraryId(this, null)
+            ItineraryManager.forceStopRecording(this)
 
             alertaAtivo = false
             mensagem = "Monitoramento desativado"

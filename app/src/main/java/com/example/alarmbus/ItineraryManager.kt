@@ -43,6 +43,14 @@ object ItineraryManager {
         return getPrefs(context).getBoolean(KEY_IS_RECORDING, false)
     }
 
+    fun forceStopRecording(context: Context) {
+        getPrefs(context).edit()
+            .putBoolean(KEY_IS_RECORDING, false)
+            .remove(KEY_RECORDING_WAYPOINTS)
+            .remove(KEY_RECORDING_START_TIME)
+            .apply()
+    }
+
     fun startLiveRecording(context: Context, name: String) {
         getPrefs(context).edit()
             .putBoolean(KEY_IS_RECORDING, true)
