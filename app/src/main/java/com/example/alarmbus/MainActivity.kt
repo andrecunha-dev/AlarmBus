@@ -256,6 +256,13 @@ class MainActivity : ComponentActivity() {
                     }
                 }
                 "com.example.alarmbus.ACTION_ALARM_STOPPED" -> {
+                    if (ItineraryManager.isRecording(this@MainActivity)) {
+                        val savedItin = ItineraryManager.stopAndSaveLiveRecording(this@MainActivity)
+                        if (savedItin != null) {
+                            Toast.makeText(this@MainActivity, "✅ Trajeto '${savedItin.name}' salvo em Meus Trajetos!", Toast.LENGTH_LONG).show()
+                        }
+                    }
+                    ItineraryManager.setActiveItineraryId(this@MainActivity, null)
                     alertaAtivo = false
                     distanciaRestante = null
                     mensagem = "Alerta desativado"
@@ -1558,6 +1565,16 @@ class MainActivity : ComponentActivity() {
 
             val serviceIntent = Intent(this, LocationForegroundService::class.java)
             stopService(serviceIntent)
+
+            if (ItineraryManager.isRecording(this)) {
+                val savedItin = ItineraryManager.stopAndSaveLiveRecording(this)
+                if (savedItin != null) {
+                    Toast.makeText(this, "✅ Trajeto '${savedItin.name}' salvo em Meus Trajetos!", Toast.LENGTH_LONG).show()
+                }
+            }
+
+            // Limpa o trajeto ativo do mapa para não ficar fixo
+            ItineraryManager.setActiveItineraryId(this, null)
 
             alertaAtivo = false
             mensagem = "Monitoramento desativado"
