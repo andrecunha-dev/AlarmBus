@@ -496,7 +496,7 @@ class MainActivity : ComponentActivity() {
                         ) {
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 androidx.compose.foundation.Image(
-                                    painter = androidx.compose.ui.res.painterResource(id = R.mipmap.ic_launcher),
+                                    painter = androidx.compose.ui.res.painterResource(id = R.mipmap.ic_launcher_foreground),
                                     contentDescription = "Logo AlarmBus",
                                     modifier = Modifier.size(36.dp)
                                 )
