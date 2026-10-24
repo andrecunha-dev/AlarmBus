@@ -56,7 +56,7 @@ import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Map
-import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.MoreHoriz
 import androidx.compose.material.icons.filled.MyLocation
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.NotificationsActive
@@ -541,40 +541,6 @@ class MainActivity : ComponentActivity() {
                     .padding(horizontal = 16.dp, vertical = 12.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                // Cabeçalho da TopBar com os 3 pontinhos para o Desenvolvedor Admin
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 4.dp, vertical = 4.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(Icons.Default.DirectionsBus, contentDescription = null, tint = purpleColor, modifier = Modifier.size(24.dp))
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(text = "AlarmBus GPS", fontWeight = FontWeight.ExtraBold, fontSize = 18.sp, color = Color.Black)
-                    }
-
-                    IconButton(
-                        onClick = {
-                            if (LicenseManager.isDeveloperAdmin(context)) {
-                                showAdminPanelDialog = true
-                            } else {
-                                showSubscriptionDialog = true
-                            }
-                        }
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.MoreVert,
-                            contentDescription = "Opções do Desenvolvedor",
-                            tint = Color.DarkGray,
-                            modifier = Modifier.size(24.dp)
-                        )
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(6.dp))
-
                 // 2. Card "Durma Tranquilo" com Imagem de Fundo
                 Card(
                     shape = RoundedCornerShape(12.dp),
@@ -692,6 +658,24 @@ class MainActivity : ComponentActivity() {
                                 )
                             }
                         }
+                        // Botão 3 Pontinhos na Horizontal (MoreHoriz) no Canto da Barra de Busca
+                        IconButton(
+                            onClick = {
+                                if (LicenseManager.isDeveloperAdmin(context)) {
+                                    showAdminPanelDialog = true
+                                } else {
+                                    showSubscriptionDialog = true
+                                }
+                            },
+                            modifier = Modifier.size(32.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.MoreHoriz,
+                                contentDescription = "Painel Admin Desenvolvedor",
+                                tint = purpleColor,
+                                modifier = Modifier.size(22.dp)
+                            )
+                        }
                         // Botão ENTER / CONFIRMAR BUSCA no campo de texto
                         IconButton(
                             onClick = {
@@ -724,86 +708,6 @@ class MainActivity : ComponentActivity() {
                         Icon(Icons.Default.Map, contentDescription = null, tint = Color.White, modifier = Modifier.size(18.dp))
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(text = "Escolher no Google Maps", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = Color.White)
-                    }
-                }
-
-                // Card "Itinerários do Fretado"
-                val savedItineraries = remember(showItineraryRecorderDialog) { ItineraryManager.getItineraries(context) }
-                val activeItineraryId = remember(showItineraryRecorderDialog) { ItineraryManager.getActiveItineraryId(context) }
-
-                Spacer(modifier = Modifier.height(10.dp))
-                Card(
-                    shape = RoundedCornerShape(12.dp),
-                    colors = CardDefaults.cardColors(containerColor = Color.White),
-                    modifier = Modifier.fillMaxWidth(),
-                    elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
-                ) {
-                    Column(modifier = Modifier.padding(12.dp)) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.SpaceBetween
-                        ) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Icon(Icons.Default.DirectionsBus, contentDescription = null, tint = purpleColor, modifier = Modifier.size(20.dp))
-                                Spacer(modifier = Modifier.width(8.dp))
-                                Text(text = "Itinerários do Fretado", fontWeight = FontWeight.Bold, fontSize = 13.sp, color = purpleColor)
-                            }
-
-                            Button(
-                                onClick = { showItineraryRecorderDialog = true },
-                                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFD32F2F)),
-                                shape = RoundedCornerShape(8.dp)
-                            ) {
-                                Icon(Icons.Default.FiberManualRecord, contentDescription = null, modifier = Modifier.size(12.dp))
-                                Spacer(modifier = Modifier.width(4.dp))
-                                Text("GRAVAR REC", fontSize = 10.sp, fontWeight = FontWeight.Bold)
-                            }
-                        }
-
-                        if (savedItineraries.isNotEmpty()) {
-                            Spacer(modifier = Modifier.height(8.dp))
-                            savedItineraries.forEach { itin ->
-                                val isActive = itin.id == activeItineraryId
-                                Surface(
-                                    shape = RoundedCornerShape(8.dp),
-                                    color = if (isActive) purpleColor.copy(alpha = 0.1f) else Color(0xFFF8F6FA),
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(vertical = 3.dp)
-                                        .clickable {
-                                            if (isActive) {
-                                                ItineraryManager.setActiveItineraryId(context, null)
-                                            } else {
-                                                ItineraryManager.setActiveItineraryId(context, itin.id)
-                                            }
-                                        }
-                                ) {
-                                    Row(
-                                        modifier = Modifier.padding(10.dp),
-                                        verticalAlignment = Alignment.CenterVertically,
-                                        horizontalArrangement = Arrangement.SpaceBetween
-                                    ) {
-                                        Column(modifier = Modifier.weight(1f)) {
-                                            Text(
-                                                text = itin.name,
-                                                fontWeight = FontWeight.Bold,
-                                                fontSize = 12.sp,
-                                                color = if (isActive) purpleColor else Color.Black
-                                            )
-                                            Text(
-                                                text = "${itin.waypoints.size} pontos capturados | ${itin.dateCreated}",
-                                                fontSize = 10.sp,
-                                                color = Color.Gray
-                                            )
-                                        }
-                                        if (isActive) {
-                                            Text(text = "✓ USANDO", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = purpleColor)
-                                        }
-                                    }
-                                }
-                            }
-                        }
                     }
                 }
 
