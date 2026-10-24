@@ -48,6 +48,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.DirectionsBus
+import androidx.compose.material.icons.filled.FiberManualRecord
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.KeyboardArrowRight
@@ -390,7 +391,17 @@ class MainActivity : ComponentActivity() {
         var isSatelliteMap by remember { mutableStateOf(false) }
         var showSubscriptionDialog by remember { mutableStateOf(false) }
         var showAdminPanelDialog by remember { mutableStateOf(false) }
+        var showItineraryRecorderDialog by remember { mutableStateOf(false) }
         var updateInfoState by remember { mutableStateOf<UpdateManager.UpdateInfo?>(null) }
+
+        if (showItineraryRecorderDialog) {
+            ItineraryRecorderDialog(
+                currentLat = localAtualLat,
+                currentLng = localAtualLng,
+                onDismiss = { showItineraryRecorderDialog = false },
+                onItinerarySaved = { showItineraryRecorderDialog = false }
+            )
+        }
 
         LaunchedEffect(Unit) {
             LicenseManager.fetchGlobalPromoConfig(context)
@@ -480,21 +491,31 @@ class MainActivity : ComponentActivity() {
                         Column(
                             modifier = Modifier
                                 .fillMaxSize()
-                                .padding(start = 60.dp, top = 12.dp, end = 12.dp, bottom = 12.dp),
+                                .padding(start = 16.dp, top = 12.dp, end = 12.dp, bottom = 12.dp),
                             verticalArrangement = Arrangement.Center
                         ) {
-                            Text(
-                                text = "Durma Tranquilo",
-                                fontSize = 15.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = Color(0xFF1A237E)
-                            )
-                            Text(
-                                text = "Eu aviso quando estiver chegando.",
-                                fontSize = 12.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = Color(0xFF1A237E).copy(alpha = 0.9f)
-                            )
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                androidx.compose.foundation.Image(
+                                    painter = androidx.compose.ui.res.painterResource(id = R.mipmap.ic_launcher),
+                                    contentDescription = "Logo AlarmBus",
+                                    modifier = Modifier.size(36.dp)
+                                )
+                                Spacer(modifier = Modifier.width(10.dp))
+                                Column {
+                                    Text(
+                                        text = "Durma Tranquilo",
+                                        fontSize = 17.sp,
+                                        fontWeight = FontWeight.ExtraBold,
+                                        color = Color(0xFF1A237E)
+                                    )
+                                    Text(
+                                        text = "Eu aviso quando estiver chegando.",
+                                        fontSize = 12.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = Color(0xFF1A237E).copy(alpha = 0.9f)
+                                    )
+                                }
+                            }
                         }
                     }
                 }
@@ -633,6 +654,86 @@ class MainActivity : ComponentActivity() {
                     }
                 }
 
+                // Card "Itinerários do Fretado"
+                val savedItineraries = remember(showItineraryRecorderDialog) { ItineraryManager.getItineraries(context) }
+                val activeItineraryId = remember(showItineraryRecorderDialog) { ItineraryManager.getActiveItineraryId(context) }
+
+                Spacer(modifier = Modifier.height(10.dp))
+                Card(
+                    shape = RoundedCornerShape(12.dp),
+                    colors = CardDefaults.cardColors(containerColor = Color.White),
+                    modifier = Modifier.fillMaxWidth(),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+                ) {
+                    Column(modifier = Modifier.padding(12.dp)) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(Icons.Default.DirectionsBus, contentDescription = null, tint = purpleColor, modifier = Modifier.size(20.dp))
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(text = "Itinerários do Fretado", fontWeight = FontWeight.Bold, fontSize = 13.sp, color = purpleColor)
+                            }
+
+                            Button(
+                                onClick = { showItineraryRecorderDialog = true },
+                                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFD32F2F)),
+                                shape = RoundedCornerShape(8.dp)
+                            ) {
+                                Icon(Icons.Default.FiberManualRecord, contentDescription = null, modifier = Modifier.size(12.dp))
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text("GRAVAR REC", fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                            }
+                        }
+
+                        if (savedItineraries.isNotEmpty()) {
+                            Spacer(modifier = Modifier.height(8.dp))
+                            savedItineraries.forEach { itin ->
+                                val isActive = itin.id == activeItineraryId
+                                Surface(
+                                    shape = RoundedCornerShape(8.dp),
+                                    color = if (isActive) purpleColor.copy(alpha = 0.1f) else Color(0xFFF8F6FA),
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(vertical = 3.dp)
+                                        .clickable {
+                                            if (isActive) {
+                                                ItineraryManager.setActiveItineraryId(context, null)
+                                            } else {
+                                                ItineraryManager.setActiveItineraryId(context, itin.id)
+                                            }
+                                        }
+                                ) {
+                                    Row(
+                                        modifier = Modifier.padding(10.dp),
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.SpaceBetween
+                                    ) {
+                                        Column(modifier = Modifier.weight(1f)) {
+                                            Text(
+                                                text = itin.name,
+                                                fontWeight = FontWeight.Bold,
+                                                fontSize = 12.sp,
+                                                color = if (isActive) purpleColor else Color.Black
+                                            )
+                                            Text(
+                                                text = "${itin.waypoints.size} pontos capturados | ${itin.dateCreated}",
+                                                fontSize = 10.sp,
+                                                color = Color.Gray
+                                            )
+                                        }
+                                        if (isActive) {
+                                            Text(text = "✓ USANDO", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = purpleColor)
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
                 // 5. Últimas localizações (Card unificado)
                 if (historicoEnderecos.isNotEmpty()) {
                     Spacer(modifier = Modifier.height(10.dp))
@@ -693,28 +794,35 @@ class MainActivity : ComponentActivity() {
 
                 Spacer(modifier = Modifier.height(12.dp))
 
-                // 7. Cálculo de Distância e Tempo Reais por Trajeto Viário (~1.35x distância em linha reta)
+                // 7. Cálculo de Distância e Tempo Reais por Trajeto Viário
                 val (distanciaTexto, tempoTexto) = remember(localAtualLat, localAtualLng, destinoLatitude, destinoLongitude) {
                     if (destinoLatitude != 0.0 && destinoLongitude != 0.0) {
-                        val results = FloatArray(1)
-                        android.location.Location.distanceBetween(
-                            localAtualLat, localAtualLng,
-                            destinoLatitude, destinoLongitude,
-                            results
-                        )
-                        val straightMeters = results[0]
-                        val roadMeters = straightMeters * 1.35f
-
-                        val distStr = if (roadMeters >= 1000) {
-                            String.format(java.util.Locale.getDefault(), "%.1f km", roadMeters / 1000f)
+                        val activeItin = ItineraryManager.getActiveItinerary(context)
+                        val roadMeters = if (activeItin != null) {
+                            ItineraryManager.calculateRemainingDistanceAlongItinerary(
+                                LatLngData(localAtualLat, localAtualLng),
+                                activeItin
+                            )
                         } else {
-                            "${roadMeters.toInt()} m"
+                            val results = FloatArray(1)
+                            android.location.Location.distanceBetween(
+                                localAtualLat, localAtualLng,
+                                destinoLatitude, destinoLongitude,
+                                results
+                            )
+                            results[0].toDouble()
                         }
-                        val timeMin = (roadMeters / 1000f / 35f * 60f).roundToInt().coerceAtLeast(1)
+
+                        val distStr = if (roadMeters >= 1000.0) {
+                            String.format(java.util.Locale("pt", "BR"), "%.3f km", roadMeters / 1000.0)
+                        } else {
+                            "${roadMeters.roundToInt()} m"
+                        }
+                        val timeMin = (roadMeters / 1000.0 / 35.0 * 60.0).roundToInt().coerceAtLeast(1)
                         val timeStr = "≈ $timeMin min"
                         Pair(distStr, timeStr)
                     } else {
-                        Pair("18,0 km", "≈ 25 min")
+                        Pair("15,543 km", "≈ 25 min")
                     }
                 }
 
@@ -1160,12 +1268,18 @@ class MainActivity : ComponentActivity() {
                 Spacer(modifier = Modifier.height(12.dp))
 
                 if (alertaAtivo && distanciaRestante != null) {
-                    Spacer(modifier = Modifier.height(6.dp))
+                    Spacer(modifier = Modifier.height(8.dp))
+                    val distMeters = (distanciaRestante as Number).toDouble()
+                    val textDist = if (distMeters >= 1000.0) {
+                        String.format(java.util.Locale("pt", "BR"), "%.3f km", distMeters / 1000.0)
+                    } else {
+                        "${distMeters.roundToInt()} m"
+                    }
                     Text(
-                        text = "Distância aproximada: ${distanciaRestante?.toInt()}m",
+                        text = "Distância aproximada: $textDist",
                         color = purpleColor,
-                        fontSize = 13.sp,
-                        fontWeight = FontWeight.Bold
+                        fontSize = 20.sp,
+                        fontWeight = FontWeight.ExtraBold
                     )
                 }
 
