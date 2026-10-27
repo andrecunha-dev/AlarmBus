@@ -1,8 +1,8 @@
 {
   "price": 7.90,
   "days": 30,
-  "latestVersionCode": 23,
-  "latestVersionName": "3.9",
+  "latestVersionCode": 24,
+  "latestVersionName": "4.0",
   "apkDownloadUrl": "https://raw.githubusercontent.com/andrecunha-dev/AlarmBus/main/AlarmBus.apk",
-  "updateNotes": "Exibição garantida da rota azul/roxa no mapa maximizado e enquadramento do destino."
+  "updateNotes": "Atualização da imagem oficial do banner para compartilhamento no WhatsApp."
 }
