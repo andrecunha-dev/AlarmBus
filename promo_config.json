@@ -1,8 +1,8 @@
 {
   "price": 7.90,
   "days": 30,
-  "latestVersionCode": 22,
-  "latestVersionName": "3.8",
+  "latestVersionCode": 23,
+  "latestVersionName": "3.9",
   "apkDownloadUrl": "https://raw.githubusercontent.com/andrecunha-dev/AlarmBus/main/AlarmBus.apk",
-  "updateNotes": "Cálculo e exibição imediata da rota ao escolher endereço, suporte à rota no mapa maximizado e ajuste nos botões de distância."
+  "updateNotes": "Exibição garantida da rota azul/roxa no mapa maximizado e enquadramento do destino."
 }

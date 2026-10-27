@@ -1927,8 +1927,23 @@ fun FullscreenMapDialog(
         if (destLat != 0.0) LatLng(destLat, destLng) else LatLng(currentLat + 0.012, currentLng + 0.012)
     }
 
+    var fullRoutePoints by remember { mutableStateOf(routePoints) }
+
+    LaunchedEffect(currentLatLng, destLatLng, destLat) {
+        if (destLat != 0.0) {
+            val fetched = fetchRoadRoutePoints(
+                currentLatLng.latitude, currentLatLng.longitude,
+                destLatLng.latitude, destLatLng.longitude
+            )
+            fullRoutePoints = fetched
+        }
+    }
+
     val cameraPositionState = rememberCameraPositionState {
-        position = CameraPosition.fromLatLngZoom(currentLatLng, 15f)
+        position = CameraPosition.fromLatLngZoom(
+            if (destLat != 0.0) destLatLng else currentLatLng,
+            if (destLat != 0.0) 14f else 15f
+        )
     }
 
     Dialog(
@@ -1964,12 +1979,15 @@ fun FullscreenMapDialog(
                         )
                     }
 
-                    val activeItin = ItineraryManager.getActiveItinerary(context)
+                    val activeItin = remember { ItineraryManager.getActiveItinerary(context) }
                     if (activeItin != null && activeItin.waypoints.isNotEmpty()) {
-                        val itinLatLngs = activeItin.waypoints.map { LatLng(it.latitude, it.longitude) }
+                        val itinLatLngs = remember(activeItin) {
+                            activeItin.waypoints.map { LatLng(it.latitude, it.longitude) }
+                        }
                         Polyline(points = itinLatLngs, color = purpleColor, width = 12f)
-                    } else if (routePoints.isNotEmpty()) {
-                        Polyline(points = routePoints, color = Color(0xFF1976D2), width = 10f)
+                    } else if (destLat != 0.0) {
+                        val pointsToDraw = if (fullRoutePoints.isNotEmpty()) fullRoutePoints else listOf(currentLatLng, destLatLng)
+                        Polyline(points = pointsToDraw, color = Color(0xFF1976D2), width = 10f)
                     }
                 }
 
