@@ -579,6 +579,7 @@ class MainActivity : ComponentActivity() {
                 initialLng = localAtualLng,
                 onDismiss = { showMapPicker = false },
                 onLocationSelected = { selectedLat, selectedLng, selectedAddress ->
+                    ItineraryManager.setActiveItineraryId(context, null)
                     destinoLatitude = selectedLat
                     destinoLongitude = selectedLng
                     enderecoPesquisado = selectedAddress
@@ -1220,6 +1221,7 @@ class MainActivity : ComponentActivity() {
                             modifier = Modifier
                                 .weight(1f)
                                 .height(42.dp),
+                            contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 2.dp),
                             colors = ButtonDefaults.buttonColors(
                                 containerColor = if (isSelected) purpleColor else Color.White,
                                 contentColor = if (isSelected) Color.White else Color.Black
@@ -1229,7 +1231,7 @@ class MainActivity : ComponentActivity() {
                         ) {
                             Text(
                                 text = if (dist >= 1000) "1 km" else "$dist m",
-                                fontSize = 12.sp,
+                                fontSize = 11.sp,
                                 fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium
                             )
                         }
@@ -1532,6 +1534,7 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun buscarEndereco(endereco: String) {
+        ItineraryManager.setActiveItineraryId(this, null)
         val geocoder = Geocoder(this)
         try {
             @Suppress("DEPRECATION")
