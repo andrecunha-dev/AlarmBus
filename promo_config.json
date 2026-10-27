@@ -1,8 +1,8 @@
 {
   "price": 7.90,
   "days": 30,
-  "latestVersionCode": 18,
-  "latestVersionName": "3.4",
+  "latestVersionCode": 19,
+  "latestVersionName": "3.5",
   "apkDownloadUrl": "https://raw.githubusercontent.com/andrecunha-dev/AlarmBus/main/AlarmBus.apk",
-  "updateNotes": "Garantia de remoção do indicador REC e do trajeto sempre que o alerta estiver desativado."
+  "updateNotes": "Limpeza da rota anterior ao escolher trajeto salvo e gravação contínua independente do alarme."
 }

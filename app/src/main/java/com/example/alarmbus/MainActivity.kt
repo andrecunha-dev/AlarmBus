@@ -256,12 +256,6 @@ class MainActivity : ComponentActivity() {
                     }
                 }
                 "com.example.alarmbus.ACTION_ALARM_STOPPED" -> {
-                    if (ItineraryManager.isRecording(this@MainActivity)) {
-                        val savedItin = ItineraryManager.stopAndSaveLiveRecording(this@MainActivity)
-                        if (savedItin != null) {
-                            Toast.makeText(this@MainActivity, "✅ Trajeto '${savedItin.name}' salvo em Meus Trajetos!", Toast.LENGTH_LONG).show()
-                        }
-                    }
                     ItineraryManager.setActiveItineraryId(this@MainActivity, null)
                     alertaAtivo = false
                     distanciaRestante = null
@@ -419,13 +413,18 @@ class MainActivity : ComponentActivity() {
                 onDismiss = { showMeusTrajetosDialog = false },
                 onSelectItinerary = { itin, isFollowOnly ->
                     showMeusTrajetosDialog = false
+
+                    // Limpa a busca e a rota azul do endereço anterior
+                    destinoLatitude = 0.0
+                    destinoLongitude = 0.0
+                    enderecoPesquisado = itin.name
+
                     ItineraryManager.setActiveItineraryId(context, itin.id)
                     if (!isFollowOnly) {
                         val lastWp = itin.waypoints.lastOrNull()
                         if (lastWp != null) {
                             destinoLatitude = lastWp.latitude
                             destinoLongitude = lastWp.longitude
-                            enderecoPesquisado = itin.name
                             salvarConfiguracoes()
                             alertaAtivo = true
                             iniciarMonitoramento()
@@ -951,14 +950,7 @@ class MainActivity : ComponentActivity() {
                             title = if (enderecoPesquisado.isNotBlank()) enderecoPesquisado else "Destino"
                         )
 
-                        // Trajeto Viário pelas Ruas (Linha Azul)
-                        Polyline(
-                            points = routePoints,
-                            color = Color(0xFF1976D2),
-                            width = 10f
-                        )
-
-                        // Exibe Itinerário Gravado em Roxo no Mapa
+                        // Exibe Itinerário Gravado em Roxo no Mapa (se selecionado)
                         val activeItin = remember(alertaAtivo, showMeusTrajetosDialog) { ItineraryManager.getActiveItinerary(context) }
                         if (activeItin != null && activeItin.waypoints.isNotEmpty()) {
                             val itinLatLngs = remember(activeItin) {
@@ -976,6 +968,13 @@ class MainActivity : ComponentActivity() {
                             Marker(
                                 state = MarkerState(position = itinLatLngs.last()),
                                 title = "Destino Final: ${activeItin.name}"
+                            )
+                        } else if (destinoLatitude != 0.0 && destinoLongitude != 0.0) {
+                            // Trajeto Viário pelas Ruas (Linha Azul) APENAS quando não houver itinerário salvo ativo
+                            Polyline(
+                                points = routePoints,
+                                color = Color(0xFF1976D2),
+                                width = 10f
                             )
                         }
 
@@ -1570,16 +1569,8 @@ class MainActivity : ComponentActivity() {
             val serviceIntent = Intent(this, LocationForegroundService::class.java)
             stopService(serviceIntent)
 
-            if (ItineraryManager.isRecording(this)) {
-                val savedItin = ItineraryManager.stopAndSaveLiveRecording(this)
-                if (savedItin != null) {
-                    Toast.makeText(this, "✅ Trajeto '${savedItin.name}' salvo em Meus Trajetos!", Toast.LENGTH_LONG).show()
-                }
-            }
-
             // Limpa o trajeto ativo do mapa para não ficar fixo
             ItineraryManager.setActiveItineraryId(this, null)
-            ItineraryManager.forceStopRecording(this)
 
             alertaAtivo = false
             mensagem = "Monitoramento desativado"
