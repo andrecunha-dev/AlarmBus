@@ -50,6 +50,7 @@ import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.DirectionsBus
 import androidx.compose.material.icons.filled.FiberManualRecord
+import androidx.compose.material.icons.filled.Fullscreen
 import androidx.compose.material.icons.filled.GpsFixed
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Home
@@ -406,7 +407,22 @@ class MainActivity : ComponentActivity() {
         var showItineraryRecorderDialog by remember { mutableStateOf(false) }
         var showMeusTrajetosDialog by remember { mutableStateOf(false) }
         var showRecordPromptDialog by remember { mutableStateOf(false) }
+        var routePoints by remember { mutableStateOf<List<LatLng>>(emptyList()) }
+        var showFullscreenMap by remember { mutableStateOf(false) }
         var updateInfoState by remember { mutableStateOf<UpdateManager.UpdateInfo?>(null) }
+
+        if (showFullscreenMap) {
+            FullscreenMapDialog(
+                currentLat = localAtualLat,
+                currentLng = localAtualLng,
+                destLat = destinoLatitude,
+                destLng = destinoLongitude,
+                destAddress = enderecoPesquisado,
+                routePoints = routePoints,
+                alertDist = distanciaAlerta,
+                onDismiss = { showFullscreenMap = false }
+            )
+        }
 
         if (showMeusTrajetosDialog) {
             MeusTrajetosDialog(
@@ -1023,6 +1039,24 @@ class MainActivity : ComponentActivity() {
                                     if (alertaAtivo && ItineraryManager.isRecording(context)) {
                                         RecIndicatorDiscrete()
                                     }
+
+                                    Spacer(modifier = Modifier.width(6.dp))
+
+                                    // Botão Maximizar Tela Cheia no Canto Direito do Card
+                                    Surface(
+                                        shape = RoundedCornerShape(8.dp),
+                                        color = purpleColor,
+                                        modifier = Modifier.clickable { showFullscreenMap = true }
+                                    ) {
+                                        Row(
+                                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 4.dp),
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            Icon(Icons.Default.Fullscreen, contentDescription = "Maximizar Mapa", tint = Color.White, modifier = Modifier.size(14.dp))
+                                            Spacer(modifier = Modifier.width(2.dp))
+                                            Text(text = "Tela Cheia", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                                        }
+                                    }
                                 }
                             }
                         }
@@ -1175,7 +1209,7 @@ class MainActivity : ComponentActivity() {
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    listOf(300, 500, 750, 1000).forEach { dist ->
+                    listOf(100, 300, 500, 750, 1000).forEach { dist ->
                         val isSelected = distanciaAlerta == dist
                         Button(
                             onClick = {
@@ -1865,5 +1899,142 @@ fun RecIndicatorDiscrete() {
             fontSize = 12.sp,
             fontWeight = FontWeight.ExtraBold
         )
+    }
+}
+
+@Composable
+fun FullscreenMapDialog(
+    currentLat: Double,
+    currentLng: Double,
+    destLat: Double,
+    destLng: Double,
+    destAddress: String,
+    routePoints: List<LatLng>,
+    alertDist: Int,
+    onDismiss: () -> Unit
+) {
+    val context = LocalContext.current
+    val purpleColor = Color(0xFF6750A4)
+    val scope = rememberCoroutineScope()
+    var isFullscreenSatellite by remember { mutableStateOf(false) }
+
+    val currentLatLng = remember(currentLat, currentLng) { LatLng(currentLat, currentLng) }
+    val destLatLng = remember(destLat, destLng) {
+        if (destLat != 0.0) LatLng(destLat, destLng) else LatLng(currentLat + 0.012, currentLng + 0.012)
+    }
+
+    val cameraPositionState = rememberCameraPositionState {
+        position = CameraPosition.fromLatLngZoom(currentLatLng, 15f)
+    }
+
+    Dialog(
+        onDismissRequest = onDismiss,
+        properties = DialogProperties(usePlatformDefaultWidth = false)
+    ) {
+        Surface(
+            modifier = Modifier.fillMaxSize(),
+            color = Color.White
+        ) {
+            Box(modifier = Modifier.fillMaxSize()) {
+                GoogleMap(
+                    modifier = Modifier.fillMaxSize(),
+                    cameraPositionState = cameraPositionState,
+                    properties = MapProperties(
+                        isMyLocationEnabled = ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED,
+                        mapType = if (isFullscreenSatellite) MapType.HYBRID else MapType.NORMAL
+                    ),
+                    uiSettings = MapUiSettings(
+                        zoomControlsEnabled = true,
+                        myLocationButtonEnabled = false
+                    )
+                ) {
+                    Marker(state = MarkerState(position = currentLatLng), title = "Sua Localização")
+                    if (destLat != 0.0) {
+                        Marker(state = MarkerState(position = destLatLng), title = destAddress.ifBlank { "Destino" })
+                        Circle(
+                            center = destLatLng,
+                            radius = alertDist.toDouble(),
+                            fillColor = Color(0x336750A4),
+                            strokeColor = Color(0xFF6750A4),
+                            strokeWidth = 4f
+                        )
+                    }
+
+                    val activeItin = ItineraryManager.getActiveItinerary(context)
+                    if (activeItin != null && activeItin.waypoints.isNotEmpty()) {
+                        val itinLatLngs = activeItin.waypoints.map { LatLng(it.latitude, it.longitude) }
+                        Polyline(points = itinLatLngs, color = purpleColor, width = 12f)
+                    } else if (routePoints.isNotEmpty()) {
+                        Polyline(points = routePoints, color = Color(0xFF1976D2), width = 10f)
+                    }
+                }
+
+                // Top Bar Controls
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .statusBarsPadding()
+                        .padding(12.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Surface(
+                        shape = CircleShape,
+                        color = Color.White,
+                        shadowElevation = 4.dp,
+                        modifier = Modifier.clickable { onDismiss() }
+                    ) {
+                        Box(modifier = Modifier.padding(10.dp), contentAlignment = Alignment.Center) {
+                            Icon(Icons.Default.Close, contentDescription = "Fechar Tela Cheia", tint = Color.Black)
+                        }
+                    }
+
+                    Surface(
+                        shape = RoundedCornerShape(14.dp),
+                        color = if (isFullscreenSatellite) purpleColor else Color.White,
+                        shadowElevation = 4.dp,
+                        modifier = Modifier.clickable { isFullscreenSatellite = !isFullscreenSatellite }
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(Icons.Default.Map, contentDescription = null, tint = if (isFullscreenSatellite) Color.White else purpleColor, modifier = Modifier.size(16.dp))
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text(
+                                text = if (isFullscreenSatellite) "Satélite" else "Padrão",
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = if (isFullscreenSatellite) Color.White else Color.Black
+                            )
+                        }
+                    }
+                }
+
+                // Bottom Centralizar Button
+                Surface(
+                    shape = RoundedCornerShape(14.dp),
+                    color = Color.White,
+                    shadowElevation = 4.dp,
+                    modifier = Modifier
+                        .align(Alignment.BottomEnd)
+                        .padding(16.dp)
+                        .clickable {
+                            scope.launch {
+                                cameraPositionState.animate(CameraUpdateFactory.newLatLngZoom(currentLatLng, 16f))
+                            }
+                        }
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(Icons.Default.GpsFixed, contentDescription = null, tint = purpleColor, modifier = Modifier.size(16.dp))
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text("Centralizar GPS", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = purpleColor)
+                    }
+                }
+            }
+        }
     }
 }

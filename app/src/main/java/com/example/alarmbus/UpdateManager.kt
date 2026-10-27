@@ -12,8 +12,8 @@ import java.net.URL
 
 object UpdateManager {
 
-    const val CURRENT_VERSION_CODE = 19
-    const val CURRENT_VERSION_NAME = "3.5"
+    const val CURRENT_VERSION_CODE = 20
+    const val CURRENT_VERSION_NAME = "3.6"
 
     data class UpdateInfo(
         val isUpdateAvailable: Boolean,
