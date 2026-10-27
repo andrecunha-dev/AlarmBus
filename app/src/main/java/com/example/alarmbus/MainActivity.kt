@@ -354,6 +354,7 @@ class MainActivity : ComponentActivity() {
 
         if (!alertaAtivo) {
             ItineraryManager.forceStopRecording(this)
+            ItineraryManager.setActiveItineraryId(this, null)
         }
 
         if (destinoLatitude != 0.0 && enderecoPesquisado.isNotBlank()) {
@@ -1209,7 +1210,7 @@ class MainActivity : ComponentActivity() {
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    listOf(100, 300, 500, 750, 1000).forEach { dist ->
+                    listOf(200, 300, 500, 750, 1000).forEach { dist ->
                         val isSelected = distanciaAlerta == dist
                         Button(
                             onClick = {

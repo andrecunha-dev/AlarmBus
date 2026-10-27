@@ -1,8 +1,8 @@
 {
   "price": 7.90,
   "days": 30,
-  "latestVersionCode": 20,
-  "latestVersionName": "3.6",
+  "latestVersionCode": 21,
+  "latestVersionName": "3.7",
   "apkDownloadUrl": "https://raw.githubusercontent.com/andrecunha-dev/AlarmBus/main/AlarmBus.apk",
-  "updateNotes": "Botão Maximizar tela cheia no mapa e opção de alarme de 100m."
+  "updateNotes": "Mudança da opção de distância para 200m e remoção automática de itinerários gravados ao iniciar o app desativado."
 }
