@@ -48,20 +48,30 @@ object ItineraryManager {
             .putBoolean(KEY_IS_RECORDING, false)
             .remove(KEY_RECORDING_WAYPOINTS)
             .remove(KEY_RECORDING_START_TIME)
-            .apply()
+            .commit()
     }
 
-    fun startLiveRecording(context: Context, name: String) {
+    fun startLiveRecording(context: Context, name: String, initialLat: Double = 0.0, initialLng: Double = 0.0) {
+        val initialArray = JSONArray()
+        if (initialLat != 0.0 && initialLng != 0.0) {
+            val initialWp = JSONObject().apply {
+                put("lat", initialLat)
+                put("lng", initialLng)
+                put("ts", System.currentTimeMillis())
+            }
+            initialArray.put(initialWp)
+        }
+
         getPrefs(context).edit()
             .putBoolean(KEY_IS_RECORDING, true)
             .putString(KEY_RECORDING_NAME, name)
-            .putString(KEY_RECORDING_WAYPOINTS, "[]")
+            .putString(KEY_RECORDING_WAYPOINTS, initialArray.toString())
             .putLong(KEY_RECORDING_START_TIME, System.currentTimeMillis())
-            .apply()
+            .commit()
     }
 
     fun addLiveWaypoint(context: Context, lat: Double, lng: Double) {
-        if (!isRecording(context)) return
+        if (!isRecording(context) || lat == 0.0 || lng == 0.0) return
         val prefs = getPrefs(context)
         val jsonStr = prefs.getString(KEY_RECORDING_WAYPOINTS, "[]") ?: "[]"
         try {
@@ -72,7 +82,7 @@ object ItineraryManager {
                 val lastLng = lastObj.getDouble("lng")
                 val dist = FloatArray(1)
                 android.location.Location.distanceBetween(lastLat, lastLng, lat, lng, dist)
-                if (dist[0] < 10f) return
+                if (dist[0] < 2f) return // ignora se moveu menos de 2 metros
             }
 
             val newWp = JSONObject().apply {
@@ -81,14 +91,13 @@ object ItineraryManager {
                 put("ts", System.currentTimeMillis())
             }
             array.put(newWp)
-            prefs.edit().putString(KEY_RECORDING_WAYPOINTS, array.toString()).apply()
+            prefs.edit().putString(KEY_RECORDING_WAYPOINTS, array.toString()).commit()
         } catch (e: Exception) {
             e.printStackTrace()
         }
     }
 
     fun stopAndSaveLiveRecording(context: Context): Itinerary? {
-        if (!isRecording(context)) return null
         val prefs = getPrefs(context)
         val name = prefs.getString(KEY_RECORDING_NAME, "Fretado Empresa → Casa") ?: "Fretado Empresa → Casa"
         val jsonStr = prefs.getString(KEY_RECORDING_WAYPOINTS, "[]") ?: "[]"
@@ -99,7 +108,7 @@ object ItineraryManager {
             .putBoolean(KEY_IS_RECORDING, false)
             .remove(KEY_RECORDING_WAYPOINTS)
             .remove(KEY_RECORDING_START_TIME)
-            .apply()
+            .commit()
 
         val waypoints = mutableListOf<LatLngData>()
         try {
@@ -217,7 +226,7 @@ object ItineraryManager {
     }
 
     fun setActiveItineraryId(context: Context, id: String?) {
-        getPrefs(context).edit().putString(KEY_ACTIVE_ITINERARY_ID, id).apply()
+        getPrefs(context).edit().putString(KEY_ACTIVE_ITINERARY_ID, id).commit()
     }
 
     fun getActiveItinerary(context: Context): Itinerary? {
@@ -250,7 +259,7 @@ object ItineraryManager {
             }
             array.put(obj)
         }
-        getPrefs(context).edit().putString(KEY_ITINERARY_LIST, array.toString()).apply()
+        getPrefs(context).edit().putString(KEY_ITINERARY_LIST, array.toString()).commit()
     }
 
     fun calculateTotalDistance(waypoints: List<LatLngData>): Double {

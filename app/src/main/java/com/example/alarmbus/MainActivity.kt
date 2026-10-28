@@ -494,7 +494,7 @@ class MainActivity : ComponentActivity() {
                         Spacer(modifier = Modifier.height(16.dp))
                         Button(
                             onClick = {
-                                ItineraryManager.startLiveRecording(context, recordingNameInput.ifBlank { "Fretado - Ida ao Trabalho" })
+                                ItineraryManager.startLiveRecording(context, recordingNameInput.ifBlank { "Fretado - Ida ao Trabalho" }, localAtualLat, localAtualLng)
                                 showRecordPromptDialog = false
                                 alertaAtivo = true
                                 salvarConfiguracoes()
