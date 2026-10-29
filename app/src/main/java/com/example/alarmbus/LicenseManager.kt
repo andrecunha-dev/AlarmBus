@@ -21,6 +21,7 @@ object LicenseManager {
     private const val KEY_PROMO_PRICE = "admin_promo_price"
     private const val KEY_PROMO_DAYS = "admin_promo_days"
     private const val KEY_IS_ADMIN = "is_developer_admin"
+    private const val KEY_FREE_TRIAL_USED = "free_trial_alarm_used"
 
     // Credenciais de Administrador Desenvolvedor
     const val ADMIN_NAME = "Andre3097"
@@ -39,6 +40,16 @@ object LicenseManager {
     }
 
     private const val ASAAS_BASE_URL = "https://www.asaas.com/api/v3"
+
+    fun hasFreeTrialAvailable(context: Context): Boolean {
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        return !prefs.getBoolean(KEY_FREE_TRIAL_USED, false)
+    }
+
+    fun consumeFreeTrial(context: Context) {
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit().putBoolean(KEY_FREE_TRIAL_USED, true).commit()
+    }
 
     fun isPromoCodeAvailable(context: Context, code: String): Boolean {
         val cleanCode = code.trim().replace("[^0-9]".toRegex(), "")
@@ -96,7 +107,6 @@ object LicenseManager {
             .putInt(KEY_PROMO_DAYS, days)
             .apply()
 
-        // Sincroniza em tempo real com a nuvem do Asaas para todos os dispositivos no Brasil
         CoroutineScope(Dispatchers.IO).launch {
             try {
                 val searchUrl = URL("$ASAAS_BASE_URL/customers?externalReference=ADMIN_PROMO_CONFIG")
@@ -192,10 +202,15 @@ object LicenseManager {
         return Settings.Secure.getString(context.contentResolver, Settings.Secure.ANDROID_ID) ?: "UNKNOWN_DEVICE"
     }
 
-    fun isLicenseActive(context: Context): Boolean {
+    fun isPaidLicenseActive(context: Context): Boolean {
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
         val expirationTime = prefs.getLong(KEY_EXPIRATION_TIME, 0L)
         return System.currentTimeMillis() < expirationTime
+    }
+
+    fun isLicenseActive(context: Context): Boolean {
+        if (isPaidLicenseActive(context)) return true
+        return hasFreeTrialAvailable(context)
     }
 
     fun getExpirationDaysRemaining(context: Context): Int {
@@ -415,7 +430,6 @@ object LicenseManager {
         val validCpf = if (cleanCpf.length == 11 || cleanCpf.length == 14) cleanCpf else "33388015805"
         val customerName = if (name.isNotBlank()) name.trim() else "Passageiro AlarmBus"
 
-        // 1. Tenta buscar por CPF
         try {
             val searchUrl = URL("$ASAAS_BASE_URL/customers?cpfCnpj=$validCpf")
             val conn = (searchUrl.openConnection() as HttpURLConnection).apply {
@@ -431,15 +445,11 @@ object LicenseManager {
                 if (data != null && data.length() > 0) {
                     return data.getJSONObject(0).getString("id")
                 }
-            } else {
-                val err = conn.errorStream?.bufferedReader()?.use { it.readText() }
-                Log.e("LicenseManager", "Search CPF error ($code): $err")
             }
         } catch (e: Exception) {
             Log.e("LicenseManager", "Erro ao buscar por CPF", e)
         }
 
-        // 2. Tenta buscar por externalReference (deviceId)
         try {
             val searchDevUrl = URL("$ASAAS_BASE_URL/customers?externalReference=$deviceId")
             val conn = (searchDevUrl.openConnection() as HttpURLConnection).apply {
@@ -455,15 +465,11 @@ object LicenseManager {
                 if (data != null && data.length() > 0) {
                     return data.getJSONObject(0).getString("id")
                 }
-            } else {
-                val err = conn.errorStream?.bufferedReader()?.use { it.readText() }
-                Log.e("LicenseManager", "Search device error ($code): $err")
             }
         } catch (e: Exception) {
             Log.e("LicenseManager", "Erro ao buscar por deviceId", e)
         }
 
-        // 3. Cria novo cliente no Asaas
         try {
             val url = URL("$ASAAS_BASE_URL/customers")
             val conn = (url.openConnection() as HttpURLConnection).apply {
@@ -488,15 +494,11 @@ object LicenseManager {
             if (code == 200) {
                 val res = conn.inputStream.bufferedReader().use { it.readText() }
                 return JSONObject(res).getString("id")
-            } else {
-                val errStream = conn.errorStream?.bufferedReader()?.use { it.readText() } ?: ""
-                Log.e("LicenseManager", "Erro ao criar cliente Asaas ($code): $errStream")
             }
         } catch (e: Exception) {
             Log.e("LicenseManager", "Erro fatal ao criar cliente Asaas", e)
         }
 
-        // 4. Fallback Mestre Garantido
         return "cus_000207424432"
     }
 

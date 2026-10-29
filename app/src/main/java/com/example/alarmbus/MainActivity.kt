@@ -1572,6 +1572,11 @@ class MainActivity : ComponentActivity() {
                 try {
                     salvarConfiguracoes()
 
+                    if (LicenseManager.hasFreeTrialAvailable(this) && !LicenseManager.isPaidLicenseActive(this)) {
+                        LicenseManager.consumeFreeTrial(this)
+                        Toast.makeText(this, "🎁 Você utilizou seu 1º Alerta Grátis de Teste!", Toast.LENGTH_LONG).show()
+                    }
+
                     val serviceIntent = Intent(this, LocationForegroundService::class.java)
                     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                         startForegroundService(serviceIntent)
