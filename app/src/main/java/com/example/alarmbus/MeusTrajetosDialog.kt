@@ -1,6 +1,5 @@
 package com.example.alarmbus
 
-import android.content.Intent
 import android.widget.Toast
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -21,7 +20,6 @@ import androidx.compose.material.icons.filled.DirectionsBus
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Map
 import androidx.compose.material.icons.filled.Notifications
-import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -45,7 +43,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
-import androidx.core.content.FileProvider
 
 @Composable
 fun MeusTrajetosDialog(
@@ -198,31 +195,6 @@ fun MeusTrajetosDialog(
 
                                             IconButton(
                                                 onClick = {
-                                                    try {
-                                                        val gpxFile = ItineraryManager.exportToGpx(context, itin)
-                                                        val contentUri = FileProvider.getUriForFile(
-                                                            context,
-                                                            "${context.packageName}.fileprovider",
-                                                            gpxFile
-                                                        )
-                                                        val shareIntent = Intent(Intent.ACTION_SEND).apply {
-                                                            type = "application/gpx+xml"
-                                                            putExtra(Intent.EXTRA_STREAM, contentUri)
-                                                            putExtra(Intent.EXTRA_TEXT, "Trajeto Fretado: ${itin.name}")
-                                                            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                                                        }
-                                                        context.startActivity(Intent.createChooser(shareIntent, "Compartilhar GPX"))
-                                                    } catch (e: Exception) {
-                                                        Toast.makeText(context, "Erro ao exportar GPX", Toast.LENGTH_SHORT).show()
-                                                    }
-                                                },
-                                                modifier = Modifier.size(32.dp)
-                                            ) {
-                                                Icon(Icons.Default.Share, contentDescription = "Compartilhar GPX", tint = Color(0xFF00897B), modifier = Modifier.size(18.dp))
-                                            }
-
-                                            IconButton(
-                                                onClick = {
                                                     ItineraryManager.deleteItinerary(context, itin.id)
                                                     itineraries = ItineraryManager.getItineraries(context)
                                                 },
@@ -236,39 +208,19 @@ fun MeusTrajetosDialog(
 
                                 Spacer(modifier = Modifier.height(10.dp))
 
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                Button(
+                                    onClick = {
+                                        onSelectItinerary(itin, false)
+                                    },
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .height(42.dp),
+                                    colors = ButtonDefaults.buttonColors(containerColor = purpleColor),
+                                    shape = RoundedCornerShape(8.dp)
                                 ) {
-                                    Button(
-                                        onClick = {
-                                            onSelectItinerary(itin, true)
-                                        },
-                                        modifier = Modifier
-                                            .weight(1f)
-                                            .height(38.dp),
-                                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF00897B)),
-                                        shape = RoundedCornerShape(8.dp)
-                                    ) {
-                                        Icon(Icons.Default.Map, contentDescription = null, modifier = Modifier.size(14.dp))
-                                        Spacer(modifier = Modifier.width(4.dp))
-                                        Text("SEGUIR ROTA", fontSize = 11.sp, fontWeight = FontWeight.Bold)
-                                    }
-
-                                    Button(
-                                        onClick = {
-                                            onSelectItinerary(itin, false)
-                                        },
-                                        modifier = Modifier
-                                            .weight(1f)
-                                            .height(38.dp),
-                                        colors = ButtonDefaults.buttonColors(containerColor = purpleColor),
-                                        shape = RoundedCornerShape(8.dp)
-                                    ) {
-                                        Icon(Icons.Default.Notifications, contentDescription = null, modifier = Modifier.size(14.dp))
-                                        Spacer(modifier = Modifier.width(4.dp))
-                                        Text("USAR NO ALERTA", fontSize = 11.sp, fontWeight = FontWeight.Bold)
-                                    }
+                                    Icon(Icons.Default.Notifications, contentDescription = null, modifier = Modifier.size(16.dp))
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Text("USAR ESTE TRAJETO NO ALERTA", fontSize = 12.sp, fontWeight = FontWeight.Bold)
                                 }
                             }
                         }

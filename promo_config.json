@@ -1,8 +1,8 @@
 {
   "price": 7.90,
   "days": 30,
-  "latestVersionCode": 26,
-  "latestVersionName": "4.2",
+  "latestVersionCode": 27,
+  "latestVersionName": "4.3",
   "apkDownloadUrl": "https://raw.githubusercontent.com/andrecunha-dev/AlarmBus/main/AlarmBus.apk",
-  "updateNotes": "Fix definitivo da gravação e salvamento de trajetos ao vivo."
+  "updateNotes": "Remoção dos botões de seguir rota e compartilhar GPX da lista Meus Trajetos."
 }
