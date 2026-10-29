@@ -353,7 +353,6 @@ class MainActivity : ComponentActivity() {
         alertaAtivo = AlarmPreferences.isAlarmActive(this)
 
         if (!alertaAtivo) {
-            ItineraryManager.forceStopRecording(this)
             ItineraryManager.setActiveItineraryId(this, null)
         }
 
@@ -1606,6 +1605,13 @@ class MainActivity : ComponentActivity() {
 
             val serviceIntent = Intent(this, LocationForegroundService::class.java)
             stopService(serviceIntent)
+
+            if (ItineraryManager.isRecording(this)) {
+                val savedItin = ItineraryManager.stopAndSaveLiveRecording(this)
+                if (savedItin != null) {
+                    Toast.makeText(this, "✅ Trajeto '${savedItin.name}' gravado e salvo em Meus Trajetos!", Toast.LENGTH_LONG).show()
+                }
+            }
 
             // Limpa o trajeto ativo do mapa para não ficar fixo
             ItineraryManager.setActiveItineraryId(this, null)

@@ -1,8 +1,8 @@
 {
   "price": 7.90,
   "days": 30,
-  "latestVersionCode": 25,
-  "latestVersionName": "4.1",
+  "latestVersionCode": 26,
+  "latestVersionName": "4.2",
   "apkDownloadUrl": "https://raw.githubusercontent.com/andrecunha-dev/AlarmBus/main/AlarmBus.apk",
-  "updateNotes": "Garantia de salvamento síncrono e contínuo de trajetos no banco de dados do aplicativo."
+  "updateNotes": "Fix definitivo da gravação e salvamento de trajetos ao vivo."
 }
