@@ -250,6 +250,64 @@ object LicenseManager {
         val statusText: String
     )
 
+    suspend fun deleteTestCustomersAsaas(): Int {
+        return withContext(Dispatchers.IO) {
+            var deletedCount = 0
+            try {
+                val url = URL("$ASAAS_BASE_URL/customers?limit=100")
+                val conn = (url.openConnection() as HttpURLConnection).apply {
+                    setRequestProperty("access_token", ASAAS_API_TOKEN)
+                    setRequestProperty("User-Agent", "AlarmBus/1.0")
+                    connectTimeout = 8000
+                    readTimeout = 8000
+                }
+                if (conn.responseCode == 200) {
+                    val jsonText = conn.inputStream.bufferedReader().use { it.readText() }
+                    val obj = JSONObject(jsonText)
+                    val data = obj.optJSONArray("data")
+                    if (data != null) {
+                        for (i in 0 until data.length()) {
+                            val item = data.getJSONObject(i)
+                            val id = item.optString("id", "")
+                            val name = item.optString("name", "")
+                            val cpf = item.optString("cpfCnpj", "")
+                            val ref = item.optString("externalReference", "")
+
+                            if (ref == "ADMIN_PROMO_CONFIG") continue
+
+                            val isTest = name.contains("Passageiro", ignoreCase = true) ||
+                                         name.contains("Teste", ignoreCase = true) ||
+                                         cpf == "33388015805" ||
+                                         cpf.isBlank() ||
+                                         cpf == "Sem CPF"
+
+                            if (isTest && id.isNotBlank()) {
+                                try {
+                                    val delUrl = URL("$ASAAS_BASE_URL/customers/$id")
+                                    val delConn = (delUrl.openConnection() as HttpURLConnection).apply {
+                                        requestMethod = "DELETE"
+                                        setRequestProperty("access_token", ASAAS_API_TOKEN)
+                                        setRequestProperty("User-Agent", "AlarmBus/1.0")
+                                        connectTimeout = 5000
+                                        readTimeout = 5000
+                                    }
+                                    if (delConn.responseCode == 200) {
+                                        deletedCount++
+                                    }
+                                } catch (e: Exception) {
+                                    Log.e("LicenseManager", "Erro ao deletar cliente $id", e)
+                                }
+                            }
+                        }
+                    }
+                }
+            } catch (e: Exception) {
+                Log.e("LicenseManager", "Erro ao limpar cadastros de teste", e)
+            }
+            deletedCount
+        }
+    }
+
     suspend fun fetchAdminCustomerStats(): AdminCustomerStats {
         return withContext(Dispatchers.IO) {
             try {
@@ -280,8 +338,16 @@ object LicenseManager {
                             val date = item.optString("dateCreated", "")
                             val id = item.optString("id", "")
 
-                            val status = if (cpf.isNotBlank() && cpf != "Sem CPF") "ATIVO (PAGO)" else "INATIVO"
-                            if (status.contains("ATIVO")) activeCount++ else inactiveCount++
+                            val isTest = name.contains("Passageiro", ignoreCase = true) ||
+                                         name.contains("Teste", ignoreCase = true) ||
+                                         cpf == "33388015805" ||
+                                         cpf.isBlank() ||
+                                         cpf == "Sem CPF"
+
+                            if (isTest) continue
+
+                            val status = "ATIVO (PAGO)"
+                            activeCount++
 
                             items.add(
                                 AdminCustomerItem(

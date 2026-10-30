@@ -20,6 +20,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AdminPanelSettings
 import androidx.compose.material.icons.filled.Analytics
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Save
 import androidx.compose.material.icons.filled.Share
@@ -63,7 +64,7 @@ fun AdminPanelDialog(
     val purpleColor = Color(0xFF6750A4)
     val scrollState = rememberScrollState()
 
-    val currentPrice = if (LicenseManager.getPromoPrice(context) < 5.00) 7.90 else LicenseManager.getPromoPrice(context)
+    val currentPrice = LicenseManager.getPromoPrice(context)
     val currentDays = LicenseManager.getPromoDays(context)
 
     var priceText by remember { mutableStateOf(String.format(java.util.Locale.US, "%.2f", currentPrice)) }
@@ -256,7 +257,7 @@ fun AdminPanelDialog(
                     ) {
                         Column(modifier = Modifier.padding(14.dp)) {
                             Text(
-                                text = "📈 Resumo dos Cadastros:",
+                                text = "📈 Resumo dos Clientes Pagantes:",
                                 fontWeight = FontWeight.Bold,
                                 fontSize = 14.sp,
                                 color = purpleColor
@@ -267,39 +268,46 @@ fun AdminPanelDialog(
                                 horizontalArrangement = Arrangement.SpaceBetween
                             ) {
                                 Text(text = "🟢 Ativos (Pagos): ${stats.activeCount}", fontWeight = FontWeight.Bold, fontSize = 12.sp, color = Color(0xFF2E7D32))
-                                Text(text = "🔴 Inativos: ${stats.inactiveCount}", fontWeight = FontWeight.Bold, fontSize = 12.sp, color = Color(0xFFC62828))
                                 Text(text = "📋 Total: ${stats.totalCount}", fontWeight = FontWeight.Bold, fontSize = 12.sp, color = Color.Black)
                             }
 
                             Spacer(modifier = Modifier.height(10.dp))
 
-                            Text(text = "Lista de Clientes Cadastrados:", fontWeight = FontWeight.Bold, fontSize = 12.sp)
-                            Spacer(modifier = Modifier.height(6.dp))
+                            if (stats.customerList.isEmpty()) {
+                                Text(
+                                    text = "Nenhum cliente pagante real registrado ainda. Todos os testes anteriores foram limpos.",
+                                    fontSize = 11.sp,
+                                    color = Color.Gray
+                                )
+                            } else {
+                                Text(text = "Lista de Clientes Cadastrados:", fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                                Spacer(modifier = Modifier.height(6.dp))
 
-                            stats.customerList.forEach { item ->
-                                Surface(
-                                    shape = RoundedCornerShape(8.dp),
-                                    color = Color.White,
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(vertical = 4.dp)
-                                ) {
-                                    Row(
-                                        modifier = Modifier.padding(10.dp),
-                                        verticalAlignment = Alignment.CenterVertically
+                                stats.customerList.forEach { item ->
+                                    Surface(
+                                        shape = RoundedCornerShape(8.dp),
+                                        color = Color.White,
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(vertical = 4.dp)
                                     ) {
-                                        Icon(Icons.Default.Person, contentDescription = null, tint = purpleColor, modifier = Modifier.size(20.dp))
-                                        Spacer(modifier = Modifier.width(8.dp))
-                                        Column(modifier = Modifier.weight(1f)) {
-                                            Text(text = item.name, fontWeight = FontWeight.Bold, fontSize = 12.sp)
-                                            Text(text = "CPF: ${item.cpfCnpj} | Data: ${item.dateCreated}", fontSize = 10.sp, color = Color.Gray)
+                                        Row(
+                                            modifier = Modifier.padding(10.dp),
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            Icon(Icons.Default.Person, contentDescription = null, tint = purpleColor, modifier = Modifier.size(20.dp))
+                                            Spacer(modifier = Modifier.width(8.dp))
+                                            Column(modifier = Modifier.weight(1f)) {
+                                                Text(text = item.name, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                                                Text(text = "CPF: ${item.cpfCnpj} | Data: ${item.dateCreated}", fontSize = 10.sp, color = Color.Gray)
+                                            }
+                                            Text(
+                                                text = item.statusText,
+                                                fontSize = 10.sp,
+                                                fontWeight = FontWeight.Bold,
+                                                color = Color(0xFF2E7D32)
+                                            )
                                         }
-                                        Text(
-                                            text = item.statusText,
-                                            fontSize = 10.sp,
-                                            fontWeight = FontWeight.Bold,
-                                            color = if (item.statusText.contains("ATIVO")) Color(0xFF2E7D32) else Color.Red
-                                        )
                                     }
                                 }
                             }
