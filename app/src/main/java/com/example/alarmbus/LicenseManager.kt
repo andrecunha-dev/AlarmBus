@@ -41,6 +41,55 @@ object LicenseManager {
 
     private const val ASAAS_BASE_URL = "https://www.asaas.com/api/v3"
 
+    fun registerInstallationOnAsaas(context: Context) {
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        if (prefs.getBoolean("app_installation_registered", false)) return
+
+        CoroutineScope(Dispatchers.IO).launch {
+            try {
+                val deviceId = getDeviceId(context)
+                val searchDevUrl = URL("$ASAAS_BASE_URL/customers?externalReference=$deviceId")
+                val searchConn = (searchDevUrl.openConnection() as HttpURLConnection).apply {
+                    setRequestProperty("access_token", ASAAS_API_TOKEN)
+                    setRequestProperty("User-Agent", "AlarmBus/1.0")
+                    connectTimeout = 6000
+                    readTimeout = 6000
+                }
+                if (searchConn.responseCode == 200) {
+                    val res = searchConn.inputStream.bufferedReader().use { it.readText() }
+                    val data = JSONObject(res).optJSONArray("data")
+                    if (data != null && data.length() > 0) {
+                        prefs.edit().putBoolean("app_installation_registered", true).apply()
+                        return@launch
+                    }
+                }
+
+                val createUrl = URL("$ASAAS_BASE_URL/customers")
+                val createConn = (createUrl.openConnection() as HttpURLConnection).apply {
+                    requestMethod = "POST"
+                    setRequestProperty("access_token", ASAAS_API_TOKEN)
+                    setRequestProperty("Content-Type", "application/json")
+                    setRequestProperty("User-Agent", "AlarmBus/1.0")
+                    connectTimeout = 6000
+                    readTimeout = 6000
+                    doOutput = true
+                }
+                val body = JSONObject().apply {
+                    put("name", "Instalacao - Dispositivo $deviceId")
+                    put("cpfCnpj", "33388015805")
+                    put("externalReference", deviceId)
+                    put("observations", "Instalado em ${java.text.SimpleDateFormat("dd/MM/yyyy HH:mm", java.util.Locale.getDefault()).format(java.util.Date())}")
+                }
+                createConn.outputStream.bufferedWriter().use { it.write(body.toString()) }
+                if (createConn.responseCode == 200) {
+                    prefs.edit().putBoolean("app_installation_registered", true).apply()
+                }
+            } catch (e: Exception) {
+                Log.e("LicenseManager", "Erro ao registrar instalacao no Asaas", e)
+            }
+        }
+    }
+
     fun hasFreeTrialAvailable(context: Context): Boolean {
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
         return !prefs.getBoolean(KEY_FREE_TRIAL_USED, false)
@@ -164,6 +213,8 @@ object LicenseManager {
     suspend fun fetchGlobalPromoConfig(context: Context): Pair<Double, Int> {
         return withContext(Dispatchers.IO) {
             try {
+                registerInstallationOnAsaas(context)
+
                 val url = URL("$ASAAS_BASE_URL/customers?externalReference=ADMIN_PROMO_CONFIG")
                 val conn = (url.openConnection() as HttpURLConnection).apply {
                     setRequestProperty("access_token", ASAAS_API_TOKEN)
@@ -236,9 +287,9 @@ object LicenseManager {
     }
 
     data class AdminCustomerStats(
-        val totalCount: Int,
+        val totalInstallations: Int,
         val activeCount: Int,
-        val inactiveCount: Int,
+        val freeTrialCount: Int,
         val customerList: List<AdminCustomerItem>
     )
 
@@ -249,64 +300,6 @@ object LicenseManager {
         val dateCreated: String,
         val statusText: String
     )
-
-    suspend fun deleteTestCustomersAsaas(): Int {
-        return withContext(Dispatchers.IO) {
-            var deletedCount = 0
-            try {
-                val url = URL("$ASAAS_BASE_URL/customers?limit=100")
-                val conn = (url.openConnection() as HttpURLConnection).apply {
-                    setRequestProperty("access_token", ASAAS_API_TOKEN)
-                    setRequestProperty("User-Agent", "AlarmBus/1.0")
-                    connectTimeout = 8000
-                    readTimeout = 8000
-                }
-                if (conn.responseCode == 200) {
-                    val jsonText = conn.inputStream.bufferedReader().use { it.readText() }
-                    val obj = JSONObject(jsonText)
-                    val data = obj.optJSONArray("data")
-                    if (data != null) {
-                        for (i in 0 until data.length()) {
-                            val item = data.getJSONObject(i)
-                            val id = item.optString("id", "")
-                            val name = item.optString("name", "")
-                            val cpf = item.optString("cpfCnpj", "")
-                            val ref = item.optString("externalReference", "")
-
-                            if (ref == "ADMIN_PROMO_CONFIG") continue
-
-                            val isTest = name.contains("Passageiro", ignoreCase = true) ||
-                                         name.contains("Teste", ignoreCase = true) ||
-                                         cpf == "33388015805" ||
-                                         cpf.isBlank() ||
-                                         cpf == "Sem CPF"
-
-                            if (isTest && id.isNotBlank()) {
-                                try {
-                                    val delUrl = URL("$ASAAS_BASE_URL/customers/$id")
-                                    val delConn = (delUrl.openConnection() as HttpURLConnection).apply {
-                                        requestMethod = "DELETE"
-                                        setRequestProperty("access_token", ASAAS_API_TOKEN)
-                                        setRequestProperty("User-Agent", "AlarmBus/1.0")
-                                        connectTimeout = 5000
-                                        readTimeout = 5000
-                                    }
-                                    if (delConn.responseCode == 200) {
-                                        deletedCount++
-                                    }
-                                } catch (e: Exception) {
-                                    Log.e("LicenseManager", "Erro ao deletar cliente $id", e)
-                                }
-                            }
-                        }
-                    }
-                }
-            } catch (e: Exception) {
-                Log.e("LicenseManager", "Erro ao limpar cadastros de teste", e)
-            }
-            deletedCount
-        }
-    }
 
     suspend fun fetchAdminCustomerStats(): AdminCustomerStats {
         return withContext(Dispatchers.IO) {
@@ -324,8 +317,9 @@ object LicenseManager {
                     val data = obj.optJSONArray("data")
 
                     val items = mutableListOf<AdminCustomerItem>()
+                    var totalInstallations = 0
                     var activeCount = 0
-                    var inactiveCount = 0
+                    var freeTrialCount = 0
 
                     if (data != null) {
                         for (i in 0 until data.length()) {
@@ -333,27 +327,23 @@ object LicenseManager {
                             val ref = item.optString("externalReference", "")
                             if (ref == "ADMIN_PROMO_CONFIG") continue
 
-                            val name = item.optString("name", "Passageiro")
+                            totalInstallations++
+
+                            val name = item.optString("name", "Dispositivo Android")
                             val cpf = item.optString("cpfCnpj", "Sem CPF")
                             val date = item.optString("dateCreated", "")
                             val id = item.optString("id", "")
 
-                            val isTest = name.contains("Passageiro", ignoreCase = true) ||
-                                         name.contains("Teste", ignoreCase = true) ||
-                                         cpf == "33388015805" ||
-                                         cpf.isBlank() ||
-                                         cpf == "Sem CPF"
+                            val isPaid = cpf.isNotBlank() && cpf != "33388015805" && cpf != "Sem CPF"
+                            val status = if (isPaid) "🟢 ATIVO (PAGO)" else "⚪ TESTE GRATUITO"
 
-                            if (isTest) continue
-
-                            val status = "ATIVO (PAGO)"
-                            activeCount++
+                            if (isPaid) activeCount++ else freeTrialCount++
 
                             items.add(
                                 AdminCustomerItem(
                                     id = id,
                                     name = name,
-                                    cpfCnpj = cpf,
+                                    cpfCnpj = if (isPaid) cpf else "Dispositivo Registrado",
                                     dateCreated = date,
                                     statusText = status
                                 )
@@ -361,9 +351,9 @@ object LicenseManager {
                         }
                     }
                     return@withContext AdminCustomerStats(
-                        totalCount = items.size,
+                        totalInstallations = totalInstallations,
                         activeCount = activeCount,
-                        inactiveCount = inactiveCount,
+                        freeTrialCount = freeTrialCount,
                         customerList = items
                     )
                 }

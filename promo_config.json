@@ -1,8 +1,8 @@
 {
   "price": 7.90,
   "days": 30,
-  "latestVersionCode": 33,
-  "latestVersionName": "4.9",
+  "latestVersionCode": 34,
+  "latestVersionName": "5.0",
   "apkDownloadUrl": "https://raw.githubusercontent.com/andrecunha-dev/AlarmBus/main/AlarmBus.apk",
-  "updateNotes": "Restauração exata do banner Durma Tranquilo em paisagem roxa na tela inicial."
+  "updateNotes": "Contador de instalações totais e métricas no Painel de Desenvolvedor."
 }

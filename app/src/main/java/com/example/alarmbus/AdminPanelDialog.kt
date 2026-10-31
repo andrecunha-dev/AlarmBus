@@ -257,18 +257,19 @@ fun AdminPanelDialog(
                     ) {
                         Column(modifier = Modifier.padding(14.dp)) {
                             Text(
-                                text = "📈 Resumo dos Clientes Pagantes:",
+                                text = "📈 Resumo das Instalações & Clientes:",
                                 fontWeight = FontWeight.Bold,
                                 fontSize = 14.sp,
                                 color = purpleColor
                             )
                             Spacer(modifier = Modifier.height(6.dp))
-                            Row(
+                            Column(
                                 modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween
+                                verticalArrangement = Arrangement.spacedBy(4.dp)
                             ) {
-                                Text(text = "🟢 Ativos (Pagos): ${stats.activeCount}", fontWeight = FontWeight.Bold, fontSize = 12.sp, color = Color(0xFF2E7D32))
-                                Text(text = "📋 Total: ${stats.totalCount}", fontWeight = FontWeight.Bold, fontSize = 12.sp, color = Color.Black)
+                                Text(text = "📱 Total de Instalações Realizadas: ${stats.totalInstallations}", fontWeight = FontWeight.Bold, fontSize = 12.sp, color = Color.Black)
+                                Text(text = "🟢 Clientes Pagantes (Ativos): ${stats.activeCount}", fontWeight = FontWeight.Bold, fontSize = 12.sp, color = Color(0xFF2E7D32))
+                                Text(text = "⚪ Testes Gratuitos / Cortesias: ${stats.freeTrialCount}", fontWeight = FontWeight.Bold, fontSize = 12.sp, color = Color(0xFFE65100))
                             }
 
                             Spacer(modifier = Modifier.height(10.dp))
