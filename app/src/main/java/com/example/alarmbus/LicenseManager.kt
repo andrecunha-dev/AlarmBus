@@ -27,7 +27,7 @@ object LicenseManager {
     const val ADMIN_NAME = "Andre3097"
     const val ADMIN_CPF = "33388015805"
 
-    // 🎁 Os 7 códigos promocionais de teste para presente (60 dias cada)
+    // 🎁 Os 7 códigos promocionais de teste para presente (60 dias cada) - USO ÚNICO POR APARELHO
     val PROMO_CODES_60_DAYS = setOf("3301", "3302", "3303", "3304", "3305", "3306", "3307")
 
     private val ASAAS_API_TOKEN by lazy {
@@ -76,7 +76,6 @@ object LicenseManager {
                 }
                 val body = JSONObject().apply {
                     put("name", "Instalacao - Dispositivo $deviceId")
-                    put("cpfCnpj", "33388015805")
                     put("externalReference", deviceId)
                     put("observations", "Instalado em ${java.text.SimpleDateFormat("dd/MM/yyyy HH:mm", java.util.Locale.getDefault()).format(java.util.Date())}")
                 }
@@ -327,45 +326,23 @@ object LicenseManager {
                             val ref = item.optString("externalReference", "")
                             if (ref == "ADMIN_PROMO_CONFIG") continue
 
-                            val name = item.optString("name", "")
-                            val cpf = item.optString("cpfCnpj", "")
+                            val name = item.optString("name", "Dispositivo Android")
+                            val cpf = item.optString("cpfCnpj", "Sem CPF")
                             val date = item.optString("dateCreated", "")
                             val id = item.optString("id", "")
 
-                            val isTestAccount = name.contains("teste", ignoreCase = true) ||
-                                                name.contains("passageiro", ignoreCase = true) ||
-                                                name.contains("instalacao", ignoreCase = true) ||
-                                                cpf == "33388015805" ||
-                                                cpf == "Sem CPF" ||
-                                                cpf.isBlank()
-
-                            if (isTestAccount) {
-                                if (id.isNotBlank()) {
-                                    try {
-                                        val delUrl = URL("$ASAAS_BASE_URL/customers/$id")
-                                        (delUrl.openConnection() as HttpURLConnection).apply {
-                                            requestMethod = "DELETE"
-                                            setRequestProperty("access_token", ASAAS_API_TOKEN)
-                                            setRequestProperty("User-Agent", "AlarmBus/1.0")
-                                            connectTimeout = 3000
-                                            readTimeout = 3000
-                                        }.responseCode
-                                    } catch (e: Exception) {
-                                        // Ignore
-                                    }
-                                }
-                                continue
-                            }
-
                             totalInstallations++
-                            val status = "🟢 ATIVO (PAGO)"
-                            activeCount++
+
+                            val isPaid = cpf.isNotBlank() && cpf.length == 11 && cpf != "33388015805"
+                            val status = if (isPaid) "🟢 ATIVO (PAGO)" else "⚪ DISPOSITIVO INSTALADO"
+
+                            if (isPaid) activeCount++ else freeTrialCount++
 
                             items.add(
                                 AdminCustomerItem(
                                     id = id,
-                                    name = name,
-                                    cpfCnpj = cpf,
+                                    name = if (isPaid) name else "Dispositivo Registrado (${ref.takeLast(6)})",
+                                    cpfCnpj = if (isPaid) cpf else "Instalação Registrada",
                                     dateCreated = date,
                                     statusText = status
                                 )
