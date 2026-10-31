@@ -1492,6 +1492,18 @@ class MainActivity : ComponentActivity() {
                     modifier = Modifier.padding(horizontal = 24.dp)
                 )
 
+                Spacer(modifier = Modifier.height(10.dp))
+
+                // Marca d'água discreta no rodapé
+                Text(
+                    text = "Desenvolvido por André Cunha",
+                    textAlign = TextAlign.Center,
+                    fontSize = 10.sp,
+                    fontWeight = FontWeight.Medium,
+                    color = Color.Gray.copy(alpha = 0.45f),
+                    modifier = Modifier.padding(bottom = 8.dp)
+                )
+
                 Spacer(modifier = Modifier.height(16.dp))
             }
         }
