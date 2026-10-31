@@ -1,8 +1,8 @@
 {
   "price": 7.90,
   "days": 30,
-  "latestVersionCode": 30,
-  "latestVersionName": "4.6",
+  "latestVersionCode": 31,
+  "latestVersionName": "4.7",
   "apkDownloadUrl": "https://raw.githubusercontent.com/andrecunha-dev/AlarmBus/main/AlarmBus.apk",
-  "updateNotes": "Filtragem automática de cadastros no relatório do Painel de Desenvolvedor."
+  "updateNotes": "Atualização da imagem do banner oficial no aplicativo e no compartilhamento."
 }
