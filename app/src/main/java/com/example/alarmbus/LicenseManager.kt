@@ -327,23 +327,45 @@ object LicenseManager {
                             val ref = item.optString("externalReference", "")
                             if (ref == "ADMIN_PROMO_CONFIG") continue
 
-                            totalInstallations++
-
-                            val name = item.optString("name", "Dispositivo Android")
-                            val cpf = item.optString("cpfCnpj", "Sem CPF")
+                            val name = item.optString("name", "")
+                            val cpf = item.optString("cpfCnpj", "")
                             val date = item.optString("dateCreated", "")
                             val id = item.optString("id", "")
 
-                            val isPaid = cpf.isNotBlank() && cpf != "33388015805" && cpf != "Sem CPF"
-                            val status = if (isPaid) "🟢 ATIVO (PAGO)" else "⚪ TESTE GRATUITO"
+                            val isTestAccount = name.contains("teste", ignoreCase = true) ||
+                                                name.contains("passageiro", ignoreCase = true) ||
+                                                name.contains("instalacao", ignoreCase = true) ||
+                                                cpf == "33388015805" ||
+                                                cpf == "Sem CPF" ||
+                                                cpf.isBlank()
 
-                            if (isPaid) activeCount++ else freeTrialCount++
+                            if (isTestAccount) {
+                                if (id.isNotBlank()) {
+                                    try {
+                                        val delUrl = URL("$ASAAS_BASE_URL/customers/$id")
+                                        (delUrl.openConnection() as HttpURLConnection).apply {
+                                            requestMethod = "DELETE"
+                                            setRequestProperty("access_token", ASAAS_API_TOKEN)
+                                            setRequestProperty("User-Agent", "AlarmBus/1.0")
+                                            connectTimeout = 3000
+                                            readTimeout = 3000
+                                        }.responseCode
+                                    } catch (e: Exception) {
+                                        // Ignore
+                                    }
+                                }
+                                continue
+                            }
+
+                            totalInstallations++
+                            val status = "🟢 ATIVO (PAGO)"
+                            activeCount++
 
                             items.add(
                                 AdminCustomerItem(
                                     id = id,
                                     name = name,
-                                    cpfCnpj = if (isPaid) cpf else "Dispositivo Registrado",
+                                    cpfCnpj = cpf,
                                     dateCreated = date,
                                     statusText = status
                                 )

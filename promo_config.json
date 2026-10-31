@@ -1,8 +1,8 @@
 {
   "price": 7.90,
   "days": 30,
-  "latestVersionCode": 34,
-  "latestVersionName": "5.0",
+  "latestVersionCode": 35,
+  "latestVersionName": "5.1",
   "apkDownloadUrl": "https://raw.githubusercontent.com/andrecunha-dev/AlarmBus/main/AlarmBus.apk",
-  "updateNotes": "Contador de instalações totais e métricas no Painel de Desenvolvedor."
+  "updateNotes": "Remoção automática e definitiva de todas as contas de teste com o nome teste do relatório."
 }
