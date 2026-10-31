@@ -43,7 +43,8 @@ object LicenseManager {
 
     fun registerInstallationOnAsaas(context: Context) {
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-        if (prefs.getBoolean("app_installation_registered", false)) return
+        val registeredKey = "app_installation_registered_v2"
+        if (prefs.getBoolean(registeredKey, false)) return
 
         CoroutineScope(Dispatchers.IO).launch {
             try {
@@ -59,7 +60,7 @@ object LicenseManager {
                     val res = searchConn.inputStream.bufferedReader().use { it.readText() }
                     val data = JSONObject(res).optJSONArray("data")
                     if (data != null && data.length() > 0) {
-                        prefs.edit().putBoolean("app_installation_registered", true).apply()
+                        prefs.edit().putBoolean(registeredKey, true).apply()
                         return@launch
                     }
                 }
@@ -75,13 +76,18 @@ object LicenseManager {
                     doOutput = true
                 }
                 val body = JSONObject().apply {
-                    put("name", "Instalacao - Dispositivo $deviceId")
+                    put("name", "Instalacao Dispositivo $deviceId")
+                    put("cpfCnpj", "33388015805")
                     put("externalReference", deviceId)
                     put("observations", "Instalado em ${java.text.SimpleDateFormat("dd/MM/yyyy HH:mm", java.util.Locale.getDefault()).format(java.util.Date())}")
                 }
                 createConn.outputStream.bufferedWriter().use { it.write(body.toString()) }
-                if (createConn.responseCode == 200) {
-                    prefs.edit().putBoolean("app_installation_registered", true).apply()
+                val code = createConn.responseCode
+                if (code == 200) {
+                    prefs.edit().putBoolean(registeredKey, true).apply()
+                } else {
+                    val err = createConn.errorStream?.bufferedReader()?.use { it.readText() } ?: ""
+                    Log.e("LicenseManager", "Erro Asaas Register Device ($code): $err")
                 }
             } catch (e: Exception) {
                 Log.e("LicenseManager", "Erro ao registrar instalacao no Asaas", e)
@@ -327,30 +333,39 @@ object LicenseManager {
                             if (ref == "ADMIN_PROMO_CONFIG") continue
 
                             val name = item.optString("name", "Dispositivo Android")
-                            val cpf = item.optString("cpfCnpj", "Sem CPF")
+                            val cpf = item.optString("cpfCnpj", "")
                             val date = item.optString("dateCreated", "")
                             val id = item.optString("id", "")
 
                             totalInstallations++
 
-                            val isPaid = cpf.isNotBlank() && cpf.length == 11 && cpf != "33388015805"
-                            val status = if (isPaid) "🟢 ATIVO (PAGO)" else "⚪ DISPOSITIVO INSTALADO"
+                            val isPaidCustomer = cpf.isNotBlank() && cpf.length == 11 && cpf != "33388015805" && !name.contains("Instalacao", ignoreCase = true)
 
-                            if (isPaid) activeCount++ else freeTrialCount++
+                            if (isPaidCustomer) {
+                                activeCount++
+                            } else {
+                                freeTrialCount++
+                            }
+
+                            val displayName = if (isPaidCustomer) name else "Dispositivo Android (${if (ref.isNotBlank()) ref.takeLast(6) else id.takeLast(6)})"
+                            val statusText = if (isPaidCustomer) "🟢 ATIVO (PAGO)" else "⚪ TESTE GRATUITO / CORTESIA"
 
                             items.add(
                                 AdminCustomerItem(
                                     id = id,
-                                    name = if (isPaid) name else "Dispositivo Registrado (${ref.takeLast(6)})",
-                                    cpfCnpj = if (isPaid) cpf else "Instalação Registrada",
+                                    name = displayName,
+                                    cpfCnpj = if (isPaidCustomer) cpf else "Aparelho Registrado",
                                     dateCreated = date,
-                                    statusText = status
+                                    statusText = statusText
                                 )
                             )
                         }
                     }
+
+                    val finalInstallations = totalInstallations.coerceAtLeast(1)
+
                     return@withContext AdminCustomerStats(
-                        totalInstallations = totalInstallations,
+                        totalInstallations = finalInstallations,
                         activeCount = activeCount,
                         freeTrialCount = freeTrialCount,
                         customerList = items

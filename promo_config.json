@@ -1,8 +1,8 @@
 {
   "price": 7.90,
   "days": 30,
-  "latestVersionCode": 36,
-  "latestVersionName": "5.2",
+  "latestVersionCode": 37,
+  "latestVersionName": "5.3",
   "apkDownloadUrl": "https://raw.githubusercontent.com/andrecunha-dev/AlarmBus/main/AlarmBus.apk",
-  "updateNotes": "Métricas de instalações ativas e relatório limpo de clientes."
+  "updateNotes": "Métricas completas de instalações ativas e clientes pagantes no relatório do desenvolvedor."
 }
