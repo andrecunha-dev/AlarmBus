@@ -1,8 +1,8 @@
 {
   "price": 7.90,
   "days": 30,
-  "latestVersionCode": 32,
-  "latestVersionName": "4.8",
+  "latestVersionCode": 33,
+  "latestVersionName": "4.9",
   "apkDownloadUrl": "https://raw.githubusercontent.com/andrecunha-dev/AlarmBus/main/AlarmBus.apk",
-  "updateNotes": "Restauração do banner inicial e atualização do banner de compartilhamento no WhatsApp."
+  "updateNotes": "Restauração exata do banner Durma Tranquilo em paisagem roxa na tela inicial."
 }
