@@ -202,6 +202,15 @@ object RoutineManager {
 
     private fun getNextTriggerTimeMillis(hour: Int, minute: Int, daysOfWeek: List<Int>): Long {
         val now = Calendar.getInstance()
+        val currentDay = now.get(Calendar.DAY_OF_WEEK)
+        val currentHour = now.get(Calendar.HOUR_OF_DAY)
+        val currentMin = now.get(Calendar.MINUTE)
+
+        // Se for o mesmo dia e minuto do teste atual, agenda para daqui a 3 segundos no futuro
+        if (daysOfWeek.contains(currentDay) && hour == currentHour && minute == currentMin) {
+            return now.timeInMillis + 3000L
+        }
+
         var target = Calendar.getInstance().apply {
             set(Calendar.HOUR_OF_DAY, hour)
             set(Calendar.MINUTE, minute)
@@ -212,7 +221,7 @@ object RoutineManager {
         // Procura o próximo dia e horário válido
         for (i in 0..7) {
             val dayOfWeek = target.get(Calendar.DAY_OF_WEEK)
-            if (daysOfWeek.contains(dayOfWeek) && target.after(now)) {
+            if (daysOfWeek.contains(dayOfWeek) && target.timeInMillis > now.timeInMillis) {
                 return target.timeInMillis
             }
             target.add(Calendar.DAY_OF_YEAR, 1)

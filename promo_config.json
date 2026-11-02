@@ -1,8 +1,8 @@
 {
   "price": 7.90,
   "days": 30,
-  "latestVersionCode": 42,
-  "latestVersionName": "6.3",
+  "latestVersionCode": 43,
+  "latestVersionName": "6.4",
   "apkDownloadUrl": "https://raw.githubusercontent.com/andrecunha-dev/AlarmBus/main/AlarmBus.apk",
-  "updateNotes": "Uso do AlarmClock nativo e prioridade máxima para disparo de rotinas agendadas."
+  "updateNotes": "Cálculo exato de data/hora no agendador de rotinas para disparar imediatamente no minuto configurado."
 }
