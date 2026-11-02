@@ -1,8 +1,8 @@
 {
   "price": 7.90,
   "days": 30,
-  "latestVersionCode": 41,
-  "latestVersionName": "6.2",
+  "latestVersionCode": 42,
+  "latestVersionName": "6.3",
   "apkDownloadUrl": "https://raw.githubusercontent.com/andrecunha-dev/AlarmBus/main/AlarmBus.apk",
-  "updateNotes": "Campo de endereço editável e botão Escolher no Google Maps no cadastro de Rotinas."
+  "updateNotes": "Uso do AlarmClock nativo e prioridade máxima para disparo de rotinas agendadas."
 }

@@ -168,22 +168,20 @@ object RoutineManager {
         )
 
         try {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                alarmManager.setExactAndAllowWhileIdle(
-                    AlarmManager.RTC_WAKEUP,
-                    triggerTimeMillis,
-                    pendingIntent
-                )
-            } else {
-                alarmManager.setExact(
-                    AlarmManager.RTC_WAKEUP,
-                    triggerTimeMillis,
-                    pendingIntent
-                )
-            }
-            Log.d("RoutineManager", "Rotina '${routine.name}' agendada para: ${java.util.Date(triggerTimeMillis)}")
+            val alarmClockInfo = AlarmManager.AlarmClockInfo(triggerTimeMillis, pendingIntent)
+            alarmManager.setAlarmClock(alarmClockInfo, pendingIntent)
+            Log.d("RoutineManager", "Rotina '${routine.name}' agendada com setAlarmClock para: ${java.util.Date(triggerTimeMillis)}")
         } catch (e: Exception) {
-            Log.e("RoutineManager", "Erro ao agendar rotina", e)
+            Log.e("RoutineManager", "Erro ao agendar rotina via setAlarmClock", e)
+            try {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                    alarmManager.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, triggerTimeMillis, pendingIntent)
+                } else {
+                    alarmManager.setExact(AlarmManager.RTC_WAKEUP, triggerTimeMillis, pendingIntent)
+                }
+            } catch (ex: Exception) {
+                Log.e("RoutineManager", "Erro fallback agendamento rotina", ex)
+            }
         }
     }
 
@@ -211,7 +209,7 @@ object RoutineManager {
             set(Calendar.MILLISECOND, 0)
         }
 
-        // Procura o próximo dia da semana válido
+        // Procura o próximo dia e horário válido
         for (i in 0..7) {
             val dayOfWeek = target.get(Calendar.DAY_OF_WEEK)
             if (daysOfWeek.contains(dayOfWeek) && target.after(now)) {
