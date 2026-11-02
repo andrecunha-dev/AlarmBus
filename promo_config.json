@@ -1,8 +1,8 @@
 {
   "price": 7.90,
   "days": 30,
-  "latestVersionCode": 39,
-  "latestVersionName": "6.0",
+  "latestVersionCode": 40,
+  "latestVersionName": "6.1",
   "apkDownloadUrl": "https://raw.githubusercontent.com/andrecunha-dev/AlarmBus/main/AlarmBus.apk",
-  "updateNotes": "Lançamento das Rotinas Programadas Automáticas por dias da semana e horários de ônibus."
+  "updateNotes": "Habilitação do teclado numérico e edição livre para campos de hora e minuto."
 }

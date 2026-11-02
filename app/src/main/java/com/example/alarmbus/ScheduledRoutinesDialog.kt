@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
@@ -42,6 +43,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
@@ -64,10 +66,10 @@ fun ScheduledRoutinesDialog(
     var showCreateDialog by remember { mutableStateOf(false) }
     var editingRoutine by remember { mutableStateOf<ScheduledRoutine?>(null) }
 
-    // Campos do formulário
+    // Campos do formulário com estado do tipo String para permitir digitação livre
     var nameInput by remember { mutableStateOf("Fretado - Ida ao Trabalho") }
-    var hourInput by remember { mutableStateOf(6) }
-    var minuteInput by remember { mutableStateOf(30) }
+    var hourText by remember { mutableStateOf("06") }
+    var minuteText by remember { mutableStateOf("30") }
     var selectedDays by remember { mutableStateOf(listOf(2, 3, 4, 5, 6)) }
     var destLatInput by remember { mutableStateOf(if (currentLat != 0.0) currentLat else -23.550520) }
     var destLngInput by remember { mutableStateOf(if (currentLng != 0.0) currentLng else -46.633308) }
@@ -122,7 +124,7 @@ fun ScheduledRoutinesDialog(
 
                     Spacer(modifier = Modifier.height(12.dp))
 
-                    // Horário
+                    // Horário com teclado numérico e edição livre
                     Text("Horário de Partida do Ônibus:", fontWeight = FontWeight.Bold, fontSize = 12.sp, modifier = Modifier.fillMaxWidth())
                     Spacer(modifier = Modifier.height(6.dp))
                     Row(
@@ -131,17 +133,27 @@ fun ScheduledRoutinesDialog(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         OutlinedTextField(
-                            value = String.format(java.util.Locale.US, "%02d", hourInput),
-                            onValueChange = { hourInput = (it.toIntOrNull() ?: 0).coerceIn(0, 23) },
-                            label = { Text("Hora (0-23)") },
+                            value = hourText,
+                            onValueChange = { input ->
+                                if (input.length <= 2 && input.all { it.isDigit() }) {
+                                    hourText = input
+                                }
+                            },
+                            label = { Text("Hora (00-23)") },
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                             singleLine = true,
                             modifier = Modifier.weight(1f)
                         )
-                        Text(":", fontSize = 20.sp, fontWeight = FontWeight.Bold)
+                        Text(":", fontSize = 22.sp, fontWeight = FontWeight.Bold)
                         OutlinedTextField(
-                            value = String.format(java.util.Locale.US, "%02d", minuteInput),
-                            onValueChange = { minuteInput = (it.toIntOrNull() ?: 0).coerceIn(0, 59) },
-                            label = { Text("Minuto (0-59)") },
+                            value = minuteText,
+                            onValueChange = { input ->
+                                if (input.length <= 2 && input.all { it.isDigit() }) {
+                                    minuteText = input
+                                }
+                            },
+                            label = { Text("Minuto (00-59)") },
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                             singleLine = true,
                             modifier = Modifier.weight(1f)
                         )
@@ -264,12 +276,15 @@ fun ScheduledRoutinesDialog(
                                 return@Button
                             }
 
+                            val parsedHour = (hourText.toIntOrNull() ?: 6).coerceIn(0, 23)
+                            val parsedMinute = (minuteText.toIntOrNull() ?: 30).coerceIn(0, 59)
+
                             val newRoutine = ScheduledRoutine(
                                 id = editingRoutine?.id ?: System.currentTimeMillis().toString(),
                                 name = nameInput.ifBlank { "Rotina Fretado" },
                                 enabled = true,
-                                hour = hourInput,
-                                minute = minuteInput,
+                                hour = parsedHour,
+                                minute = parsedMinute,
                                 daysOfWeek = selectedDays,
                                 destLat = destLatInput,
                                 destLng = destLngInput,
@@ -282,7 +297,7 @@ fun ScheduledRoutinesDialog(
                             showCreateDialog = false
                             editingRoutine = null
 
-                            Toast.makeText(context, "⏰ Rotina '${newRoutine.name}' programada com sucesso!", Toast.LENGTH_LONG).show()
+                            Toast.makeText(context, "⏰ Rotina '${newRoutine.name}' programada para as ${String.format(java.util.Locale.US, "%02d:%02d", parsedHour, parsedMinute)}!", Toast.LENGTH_LONG).show()
                         },
                         modifier = Modifier
                             .fillMaxWidth()
@@ -349,8 +364,8 @@ fun ScheduledRoutinesDialog(
                     onClick = {
                         editingRoutine = null
                         nameInput = "Fretado - Ida ao Trabalho"
-                        hourInput = 6
-                        minuteInput = 30
+                        hourText = "06"
+                        minuteText = "30"
                         selectedDays = listOf(2, 3, 4, 5, 6)
                         if (currentLat != 0.0) {
                             destLatInput = currentLat
@@ -443,8 +458,8 @@ fun ScheduledRoutinesDialog(
                                         onClick = {
                                             editingRoutine = r
                                             nameInput = r.name
-                                            hourInput = r.hour
-                                            minuteInput = r.minute
+                                            hourText = String.format(java.util.Locale.US, "%02d", r.hour)
+                                            minuteText = String.format(java.util.Locale.US, "%02d", r.minute)
                                             selectedDays = r.daysOfWeek
                                             destLatInput = r.destLat
                                             destLngInput = r.destLng
