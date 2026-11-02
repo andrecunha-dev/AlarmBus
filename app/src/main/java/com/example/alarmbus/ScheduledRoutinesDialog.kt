@@ -21,6 +21,7 @@ import androidx.compose.material.icons.filled.Alarm
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Map
 import androidx.compose.material.icons.filled.Place
 import androidx.compose.material.icons.filled.Save
 import androidx.compose.material3.Button
@@ -210,28 +211,31 @@ fun ScheduledRoutinesDialog(
 
                     Spacer(modifier = Modifier.height(14.dp))
 
-                    // Destino
+                    // Destino Editable Text Field + Google Maps Picker Button
                     Text("Endereço de Destino:", fontWeight = FontWeight.Bold, fontSize = 12.sp, modifier = Modifier.fillMaxWidth())
                     Spacer(modifier = Modifier.height(4.dp))
 
-                    Card(
-                        colors = CardDefaults.cardColors(containerColor = Color(0xFFF8F6FA)),
+                    OutlinedTextField(
+                        value = destAddressInput,
+                        onValueChange = { destAddressInput = it },
+                        label = { Text("Digite o endereço de destino") },
+                        singleLine = true,
                         modifier = Modifier.fillMaxWidth()
+                    )
+
+                    Spacer(modifier = Modifier.height(6.dp))
+
+                    Button(
+                        onClick = {
+                            onOpenMapPicker()
+                        },
+                        colors = ButtonDefaults.buttonColors(containerColor = purpleColor),
+                        shape = RoundedCornerShape(8.dp),
+                        modifier = Modifier.fillMaxWidth().height(42.dp)
                     ) {
-                        Row(
-                            modifier = Modifier.padding(10.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Icon(Icons.Default.Place, contentDescription = null, tint = Color(0xFFD32F2F), modifier = Modifier.size(18.dp))
-                            Spacer(modifier = Modifier.width(6.dp))
-                            Text(
-                                text = destAddressInput,
-                                fontSize = 12.sp,
-                                fontWeight = FontWeight.Bold,
-                                modifier = Modifier.weight(1f),
-                                maxLines = 2
-                            )
-                        }
+                        Icon(Icons.Default.Map, contentDescription = null, tint = Color.White, modifier = Modifier.size(16.dp))
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text("ESCOLHER NO GOOGLE MAPS", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = Color.White)
                     }
 
                     Spacer(modifier = Modifier.height(14.dp))
