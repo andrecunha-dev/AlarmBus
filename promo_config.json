@@ -1,8 +1,8 @@
 {
   "price": 7.90,
   "days": 30,
-  "latestVersionCode": 43,
-  "latestVersionName": "6.4",
+  "latestVersionCode": 44,
+  "latestVersionName": "6.5",
   "apkDownloadUrl": "https://raw.githubusercontent.com/andrecunha-dev/AlarmBus/main/AlarmBus.apk",
-  "updateNotes": "Cálculo exato de data/hora no agendador de rotinas para disparar imediatamente no minuto configurado."
+  "updateNotes": "Disparo direto de serviço em primeiro plano via PendingIntent getForegroundService."
 }

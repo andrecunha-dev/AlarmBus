@@ -156,28 +156,54 @@ object RoutineManager {
         val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
         val triggerTimeMillis = getNextTriggerTimeMillis(routine.hour, routine.minute, routine.daysOfWeek)
 
-        val intent = Intent(context, RoutineAlarmReceiver::class.java).apply {
-            putExtra("routine_id", routine.id)
+        // Configura o destino da rotina
+        AlarmPreferences.saveAlarmConfig(
+            context = context,
+            lat = routine.destLat,
+            lng = routine.destLng,
+            address = routine.destAddress,
+            dist = routine.alertDist,
+            vibration = AlarmPreferences.isVibrationActive(context),
+            volLevel = AlarmPreferences.getVolumeLevel(context),
+            toneUri = AlarmPreferences.getToneUri(context),
+            active = true
+        )
+
+        if (!routine.itineraryId.isNullOrBlank()) {
+            ItineraryManager.setActiveItineraryId(context, routine.itineraryId)
         }
 
-        val pendingIntent = PendingIntent.getBroadcast(
-            context,
-            routine.id.hashCode(),
-            intent,
-            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-        )
+        // Intenção direta para acionar o serviço em primeiro plano sem bloqueio de background
+        val serviceIntent = Intent(context, LocationForegroundService::class.java).apply {
+            putExtra("routine_id", routine.id)
+            putExtra("routine_name", routine.name)
+        }
+
+        val pendingIntent = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            PendingIntent.getForegroundService(
+                context,
+                routine.id.hashCode(),
+                serviceIntent,
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+            )
+        } else {
+            PendingIntent.getService(
+                context,
+                routine.id.hashCode(),
+                serviceIntent,
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+            )
+        }
 
         try {
             val alarmClockInfo = AlarmManager.AlarmClockInfo(triggerTimeMillis, pendingIntent)
             alarmManager.setAlarmClock(alarmClockInfo, pendingIntent)
-            Log.d("RoutineManager", "Rotina '${routine.name}' agendada com setAlarmClock para: ${java.util.Date(triggerTimeMillis)}")
+            Log.d("RoutineManager", "Rotina '${routine.name}' agendada via Direct ForegroundService para: ${java.util.Date(triggerTimeMillis)}")
         } catch (e: Exception) {
             Log.e("RoutineManager", "Erro ao agendar rotina via setAlarmClock", e)
             try {
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
                     alarmManager.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, triggerTimeMillis, pendingIntent)
-                } else {
-                    alarmManager.setExact(AlarmManager.RTC_WAKEUP, triggerTimeMillis, pendingIntent)
                 }
             } catch (ex: Exception) {
                 Log.e("RoutineManager", "Erro fallback agendamento rotina", ex)
@@ -187,13 +213,22 @@ object RoutineManager {
 
     fun cancelRoutineAlarm(context: Context, routineId: String) {
         val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
-        val intent = Intent(context, RoutineAlarmReceiver::class.java)
-        val pendingIntent = PendingIntent.getBroadcast(
-            context,
-            routineId.hashCode(),
-            intent,
-            PendingIntent.FLAG_NO_CREATE or PendingIntent.FLAG_IMMUTABLE
-        )
+        val serviceIntent = Intent(context, LocationForegroundService::class.java)
+        val pendingIntent = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            PendingIntent.getForegroundService(
+                context,
+                routineId.hashCode(),
+                serviceIntent,
+                PendingIntent.FLAG_NO_CREATE or PendingIntent.FLAG_IMMUTABLE
+            )
+        } else {
+            PendingIntent.getService(
+                context,
+                routineId.hashCode(),
+                serviceIntent,
+                PendingIntent.FLAG_NO_CREATE or PendingIntent.FLAG_IMMUTABLE
+            )
+        }
         if (pendingIntent != null) {
             alarmManager.cancel(pendingIntent)
             pendingIntent.cancel()

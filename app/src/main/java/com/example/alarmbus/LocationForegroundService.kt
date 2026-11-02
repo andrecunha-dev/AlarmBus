@@ -61,10 +61,21 @@ class LocationForegroundService : Service() {
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        val notification = createTrackingNotification("Monitorando sua localização...")
+        val routineName = intent?.getStringExtra("routine_name") ?: ""
+        val statusText = if (routineName.isNotBlank()) "Rotina '$routineName' ativada!" else "Monitorando sua localização..."
+
+        val notification = createTrackingNotification(statusText)
         startForeground(NOTIFICATION_ID, notification)
 
         startLocationTracking()
+
+        val routineId = intent?.getStringExtra("routine_id")
+        if (!routineId.isNullOrBlank()) {
+            val routine = RoutineManager.getRoutines(this).find { it.id == routineId }
+            if (routine != null) {
+                RoutineManager.scheduleRoutineAlarm(this, routine)
+            }
+        }
 
         return START_STICKY
     }
