@@ -46,6 +46,8 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Alarm
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.DirectionsBus
@@ -407,9 +409,24 @@ class MainActivity : ComponentActivity() {
         var showItineraryRecorderDialog by remember { mutableStateOf(false) }
         var showMeusTrajetosDialog by remember { mutableStateOf(false) }
         var showRecordPromptDialog by remember { mutableStateOf(false) }
+        var showRoutinesDialog by remember { mutableStateOf(false) }
         var routePoints by remember { mutableStateOf<List<LatLng>>(emptyList()) }
         var showFullscreenMap by remember { mutableStateOf(false) }
         var updateInfoState by remember { mutableStateOf<UpdateManager.UpdateInfo?>(null) }
+
+        if (showRoutinesDialog) {
+            ScheduledRoutinesDialog(
+                currentLat = destinoLatitude,
+                currentLng = destinoLongitude,
+                currentAddress = enderecoPesquisado,
+                currentDist = distanciaAlerta,
+                onDismiss = { showRoutinesDialog = false },
+                onOpenMapPicker = {
+                    showRoutinesDialog = false
+                    showMapPicker = true
+                }
+            )
+        }
 
         if (showFullscreenMap) {
             FullscreenMapDialog(
@@ -603,7 +620,7 @@ class MainActivity : ComponentActivity() {
                     .padding(horizontal = 16.dp, vertical = 12.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                // 1. TopBar com 3 Pontinhos Admin e Botão "Meus Trajetos"
+                // 1. TopBar com 3 Pontinhos Admin, Botão "Rotinas" e Botão "Meus Trajetos"
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -629,18 +646,35 @@ class MainActivity : ComponentActivity() {
                         )
                     }
 
-                    Surface(
-                        shape = RoundedCornerShape(12.dp),
-                        color = purpleColor.copy(alpha = 0.12f),
-                        modifier = Modifier.clickable { showMeusTrajetosDialog = true }
-                    ) {
-                        Row(
-                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
-                            verticalAlignment = Alignment.CenterVertically
+                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        Surface(
+                            shape = RoundedCornerShape(12.dp),
+                            color = purpleColor.copy(alpha = 0.12f),
+                            modifier = Modifier.clickable { showRoutinesDialog = true }
                         ) {
-                            Icon(Icons.Default.DirectionsBus, contentDescription = null, tint = purpleColor, modifier = Modifier.size(14.dp))
-                            Spacer(modifier = Modifier.width(4.dp))
-                            Text(text = "Meus Trajetos", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = purpleColor)
+                            Row(
+                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(Icons.Default.Alarm, contentDescription = null, tint = purpleColor, modifier = Modifier.size(14.dp))
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text(text = "Rotinas", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = purpleColor)
+                            }
+                        }
+
+                        Surface(
+                            shape = RoundedCornerShape(12.dp),
+                            color = purpleColor.copy(alpha = 0.12f),
+                            modifier = Modifier.clickable { showMeusTrajetosDialog = true }
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(Icons.Default.DirectionsBus, contentDescription = null, tint = purpleColor, modifier = Modifier.size(14.dp))
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text(text = "Meus Trajetos", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = purpleColor)
+                            }
                         }
                     }
                 }
