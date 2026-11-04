@@ -15,7 +15,7 @@ class RoutineAlarmReceiver : BroadcastReceiver() {
         if (!routine.enabled) return
 
         try {
-            Log.d("RoutineAlarmReceiver", "Ativando rotina programada: ${routine.name}")
+            Log.d("RoutineAlarmReceiver", "Iniciando monitoramento de GPS da rotina: ${routine.name}")
 
             AlarmPreferences.saveAlarmConfig(
                 context = context,
@@ -33,9 +33,12 @@ class RoutineAlarmReceiver : BroadcastReceiver() {
                 ItineraryManager.setActiveItineraryId(context, routine.itineraryId)
             }
 
-            // Inicia o serviço de localização em primeiro plano
+            // Inicia o serviço de localização em primeiro plano para acompanhar a viagem até o destino
             try {
-                val serviceIntent = Intent(context, LocationForegroundService::class.java)
+                val serviceIntent = Intent(context, LocationForegroundService::class.java).apply {
+                    putExtra("routine_id", routine.id)
+                    putExtra("routine_name", routine.name)
+                }
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                     context.startForegroundService(serviceIntent)
                 } else {
@@ -45,14 +48,8 @@ class RoutineAlarmReceiver : BroadcastReceiver() {
                 Log.w("RoutineAlarmReceiver", "Aviso ao iniciar FGS em segundo plano: ${e.message}")
             }
 
-            // Reagenda a próxima execução da rotina
+            // Reagenda a próxima execução da rotina para o próximo dia válido
             RoutineManager.scheduleRoutineAlarm(context, routine)
-
-            // Dispara a tela e som do alarme
-            val toneUri = AlarmPreferences.getToneUri(context)
-            val vibrate = AlarmPreferences.isVibrationActive(context)
-            val volLevel = AlarmPreferences.getVolumeLevel(context)
-            AlarmPlayer.startAlarm(context, toneUri, vibrate, volLevel)
 
         } catch (e: Exception) {
             Log.e("RoutineAlarmReceiver", "Erro ao executar Broadcast Receiver da rotina", e)

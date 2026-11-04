@@ -1,8 +1,8 @@
 {
   "price": 7.90,
   "days": 30,
-  "latestVersionCode": 48,
-  "latestVersionName": "6.9",
+  "latestVersionCode": 49,
+  "latestVersionName": "7.0",
   "apkDownloadUrl": "https://raw.githubusercontent.com/andrecunha-dev/AlarmBus/main/AlarmBus.apk",
-  "updateNotes": "Proteção contra falhas no disparo em segundo plano e inicialização garantida do alarme."
+  "updateNotes": "Encerramento imediato do alarme no primeiro toque e aguardo silencioso da próxima rotina."
 }
