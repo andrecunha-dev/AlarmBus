@@ -6,10 +6,6 @@ import android.content.Intent
 import android.os.Build
 import android.util.Log
 
-/**
- * Receiver acionado pelo AlarmManager no horário exato da rotina programada.
- * Ativa automaticamente o monitoramento GPS para o destino configurado sem necessidade de intervenção do usuário.
- */
 class RoutineAlarmReceiver : BroadcastReceiver() {
 
     override fun onReceive(context: Context, intent: Intent) {
@@ -19,9 +15,8 @@ class RoutineAlarmReceiver : BroadcastReceiver() {
         if (!routine.enabled) return
 
         try {
-            Log.d("RoutineAlarmReceiver", "Ativando rotina programada automaticamente: ${routine.name}")
+            Log.d("RoutineAlarmReceiver", "Ativando rotina programada: ${routine.name}")
 
-            // 1. Configura as preferências do destino da rotina
             AlarmPreferences.saveAlarmConfig(
                 context = context,
                 lat = routine.destLat,
@@ -38,26 +33,29 @@ class RoutineAlarmReceiver : BroadcastReceiver() {
                 ItineraryManager.setActiveItineraryId(context, routine.itineraryId)
             }
 
-            // 2. Inicia o serviço de monitoramento GPS em primeiro plano
-            val serviceIntent = Intent(context, LocationForegroundService::class.java)
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                context.startForegroundService(serviceIntent)
-            } else {
-                context.startService(serviceIntent)
+            // Inicia o serviço de localização em primeiro plano
+            try {
+                val serviceIntent = Intent(context, LocationForegroundService::class.java)
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                    context.startForegroundService(serviceIntent)
+                } else {
+                    context.startService(serviceIntent)
+                }
+            } catch (e: Exception) {
+                Log.w("RoutineAlarmReceiver", "Aviso ao iniciar FGS em segundo plano: ${e.message}")
             }
 
-            // 3. Notifica e reagenda a próxima execução da rotina para o próximo dia válido da semana
+            // Reagenda a próxima execução da rotina
             RoutineManager.scheduleRoutineAlarm(context, routine)
 
-            val updateIntent = Intent("LOCATION_UPDATE").apply {
-                putExtra("latitude", routine.destLat)
-                putExtra("longitude", routine.destLng)
-                setPackage(context.packageName)
-            }
-            context.sendBroadcast(updateIntent)
+            // Dispara a tela e som do alarme
+            val toneUri = AlarmPreferences.getToneUri(context)
+            val vibrate = AlarmPreferences.isVibrationActive(context)
+            val volLevel = AlarmPreferences.getVolumeLevel(context)
+            AlarmPlayer.startAlarm(context, toneUri, vibrate, volLevel)
 
         } catch (e: Exception) {
-            Log.e("RoutineAlarmReceiver", "Erro ao executar rotina programada", e)
+            Log.e("RoutineAlarmReceiver", "Erro ao executar Broadcast Receiver da rotina", e)
         }
     }
 }

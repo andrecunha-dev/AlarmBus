@@ -66,14 +66,18 @@ class LocationForegroundService : Service() {
         val statusText = if (routineName.isNotBlank()) "Rotina '$routineName' ativada!" else "Monitorando sua localização..."
 
         val notification = createTrackingNotification(statusText)
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            startForeground(
-                NOTIFICATION_ID,
-                notification,
-                ServiceInfo.FOREGROUND_SERVICE_TYPE_LOCATION
-            )
-        } else {
-            startForeground(NOTIFICATION_ID, notification)
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                startForeground(
+                    NOTIFICATION_ID,
+                    notification,
+                    ServiceInfo.FOREGROUND_SERVICE_TYPE_LOCATION
+                )
+            } else {
+                startForeground(NOTIFICATION_ID, notification)
+            }
+        } catch (e: Exception) {
+            Log.e("LocationService", "Aviso no startForeground: ${e.message}")
         }
 
         startLocationTracking()
