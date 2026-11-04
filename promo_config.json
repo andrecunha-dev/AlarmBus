@@ -1,8 +1,8 @@
 {
   "price": 7.90,
   "days": 30,
-  "latestVersionCode": 45,
-  "latestVersionName": "6.6",
+  "latestVersionCode": 46,
+  "latestVersionName": "6.7",
   "apkDownloadUrl": "https://raw.githubusercontent.com/andrecunha-dev/AlarmBus/main/AlarmBus.apk",
-  "updateNotes": "Solicitação de autorização de Alarmes Exatos no Android 12/13/14 para garantir o despertar automático."
+  "updateNotes": "Desativação imediata e sem looping ao tocar no botão de desligar o alarme."
 }

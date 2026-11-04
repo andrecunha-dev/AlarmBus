@@ -186,8 +186,21 @@ object AlarmPlayer {
     fun stopAlarm(context: Context) {
         ringing = false
 
+        // Marca o alarme como inativo para impedir re-disparo do GPS em loop
+        AlarmPreferences.setAlarmActive(context, false)
+
         val audioManager = context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
         val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+
+        // Envia broadcast de desativação do alarme
+        try {
+            val stopIntent = Intent("com.example.alarmbus.ACTION_STOP_ALARM").apply {
+                setPackage(context.packageName)
+            }
+            context.sendBroadcast(stopIntent)
+        } catch (e: Exception) {
+            Log.e("AlarmPlayer", "Erro ao enviar broadcast stop", e)
+        }
 
         // 1. Cancela imediatamente todas as notificações de alarme e rastreamento da barra do Android
         try {

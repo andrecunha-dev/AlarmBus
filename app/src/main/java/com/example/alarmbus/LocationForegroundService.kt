@@ -192,7 +192,10 @@ class LocationForegroundService : Service() {
         val alertDist = AlarmPreferences.getAlertDist(this)
         val active = AlarmPreferences.isAlarmActive(this)
 
-        if (destLat == 0.0 || destLng == 0.0 || !active) return
+        if (destLat == 0.0 || destLng == 0.0 || !active) {
+            stopSelf()
+            return
+        }
 
         val destino = Location("").apply {
             latitude = destLat
@@ -205,6 +208,11 @@ class LocationForegroundService : Service() {
     }
 
     private fun processarDistanciaEAlarme(location: Location, realDistance: Float, alertDist: Int) {
+        if (!AlarmPreferences.isAlarmActive(this)) {
+            stopSelf()
+            return
+        }
+
         // Envia broadcast para a MainActivity atualizar a interface com a distância exata e idêntica do mapa
         val updateIntent = Intent("LOCATION_UPDATE").apply {
             putExtra("latitude", location.latitude)
@@ -222,7 +230,7 @@ class LocationForegroundService : Service() {
             notificationManager.notify(NOTIFICATION_ID, notification)
 
             // Dispara o alarme exatamente quando a distância do GPS entrar no raio configurado (ex: <= 300m)
-            if (realDistance <= alertDist) {
+            if (realDistance <= alertDist && AlarmPreferences.isAlarmActive(this)) {
                 val toneUri = AlarmPreferences.getToneUri(this)
                 val vibrate = AlarmPreferences.isVibrationActive(this)
                 val volLevel = AlarmPreferences.getVolumeLevel(this)
