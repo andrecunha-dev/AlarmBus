@@ -138,11 +138,17 @@ class LocationForegroundService : Service() {
     }
 
     private fun showAlarmTriggeredNotification(distanciaMetros: Int) {
-        val intent = Intent(this, MainActivity::class.java)
-        val pendingIntent = PendingIntent.getActivity(
+        val alarmIntent = Intent(this, AlarmActivity::class.java).apply {
+            addFlags(
+                Intent.FLAG_ACTIVITY_NEW_TASK or
+                Intent.FLAG_ACTIVITY_SINGLE_TOP or
+                Intent.FLAG_ACTIVITY_CLEAR_TOP
+            )
+        }
+        val fullScreenPendingIntent = PendingIntent.getActivity(
             this,
-            0,
-            intent,
+            2,
+            alarmIntent,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
@@ -160,10 +166,10 @@ class LocationForegroundService : Service() {
             .setContentTitle("🚨 VOCÊ ESTÁ CHEGANDO!")
             .setContentText("Destino a aproximadamente ${distanciaMetros}m. Prepare-se para descer.")
             .setSmallIcon(R.mipmap.ic_launcher)
-            .setContentIntent(pendingIntent)
+            .setContentIntent(fullScreenPendingIntent)
             .setPriority(NotificationCompat.PRIORITY_MAX)
             .setCategory(NotificationCompat.CATEGORY_ALARM)
-            .setFullScreenIntent(pendingIntent, true)
+            .setFullScreenIntent(fullScreenPendingIntent, true)
             .addAction(R.drawable.ic_launcher_foreground, "DESATIVAR ALARME", stopPendingIntent)
             .setAutoCancel(false)
             .setOngoing(true)
