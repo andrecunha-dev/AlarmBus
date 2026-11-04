@@ -11,8 +11,8 @@ android {
         applicationId = "com.example.alarmbus"
         minSdk = 26
         targetSdk = 34
-        versionCode = 46
-        versionName = "6.7"
+        versionCode = 47
+        versionName = "6.8"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 

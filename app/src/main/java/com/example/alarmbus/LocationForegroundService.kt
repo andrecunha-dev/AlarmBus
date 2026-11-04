@@ -8,6 +8,7 @@ import android.app.Service
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.content.pm.ServiceInfo
 import android.location.Location
 import android.os.Build
 import android.os.IBinder
@@ -65,7 +66,15 @@ class LocationForegroundService : Service() {
         val statusText = if (routineName.isNotBlank()) "Rotina '$routineName' ativada!" else "Monitorando sua localização..."
 
         val notification = createTrackingNotification(statusText)
-        startForeground(NOTIFICATION_ID, notification)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            startForeground(
+                NOTIFICATION_ID,
+                notification,
+                ServiceInfo.FOREGROUND_SERVICE_TYPE_LOCATION
+            )
+        } else {
+            startForeground(NOTIFICATION_ID, notification)
+        }
 
         startLocationTracking()
 

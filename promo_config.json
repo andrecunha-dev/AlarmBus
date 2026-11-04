@@ -1,8 +1,8 @@
 {
   "price": 7.90,
   "days": 30,
-  "latestVersionCode": 46,
-  "latestVersionName": "6.7",
+  "latestVersionCode": 47,
+  "latestVersionName": "6.8",
   "apkDownloadUrl": "https://raw.githubusercontent.com/andrecunha-dev/AlarmBus/main/AlarmBus.apk",
-  "updateNotes": "Desativação imediata e sem looping ao tocar no botão de desligar o alarme."
+  "updateNotes": "Atribuição de FOREGROUND_SERVICE_TYPE_LOCATION para compatibilidade completa com Android 14 no disparo das rotinas."
 }
