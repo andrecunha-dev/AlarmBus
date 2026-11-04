@@ -1,8 +1,8 @@
 {
   "price": 7.90,
   "days": 30,
-  "latestVersionCode": 44,
-  "latestVersionName": "6.5",
+  "latestVersionCode": 45,
+  "latestVersionName": "6.6",
   "apkDownloadUrl": "https://raw.githubusercontent.com/andrecunha-dev/AlarmBus/main/AlarmBus.apk",
-  "updateNotes": "Disparo direto de serviço em primeiro plano via PendingIntent getForegroundService."
+  "updateNotes": "Solicitação de autorização de Alarmes Exatos no Android 12/13/14 para garantir o despertar automático."
 }

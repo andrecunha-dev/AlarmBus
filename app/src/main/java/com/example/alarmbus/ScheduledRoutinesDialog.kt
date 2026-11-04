@@ -362,6 +362,51 @@ fun ScheduledRoutinesDialog(
                     color = Color.Gray
                 )
 
+                // Alerta de permissão de alarme exato para Android 12+
+                val alarmManager = context.getSystemService(android.content.Context.ALARM_SERVICE) as android.app.AlarmManager
+                val needsExactAlarmPermission = android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S && !alarmManager.canScheduleExactAlarms()
+
+                if (needsExactAlarmPermission) {
+                    Spacer(modifier = Modifier.height(10.dp))
+                    Surface(
+                        shape = RoundedCornerShape(10.dp),
+                        color = Color(0xFFFFF3E0),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable {
+                                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
+                                    try {
+                                        val intent = android.content.Intent(android.provider.Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM).apply {
+                                            data = android.net.Uri.parse("package:${context.packageName}")
+                                            addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
+                                        }
+                                        context.startActivity(intent)
+                                    } catch (e: Exception) {
+                                        val intent = android.content.Intent(android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+                                            data = android.net.Uri.parse("package:${context.packageName}")
+                                            addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
+                                        }
+                                        context.startActivity(intent)
+                                    }
+                                }
+                            }
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(10.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(Icons.Default.Alarm, contentDescription = null, tint = Color(0xFFE65100), modifier = Modifier.size(20.dp))
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                text = "⚠️ Para o Android acordar o app no horário exato, toque aqui para autorizar 'Alarmes exatos'.",
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = Color(0xFFE65100)
+                            )
+                        }
+                    }
+                }
+
                 Spacer(modifier = Modifier.height(14.dp))
 
                 Button(
