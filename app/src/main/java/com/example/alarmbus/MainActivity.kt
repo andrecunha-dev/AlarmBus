@@ -510,10 +510,10 @@ class MainActivity : ComponentActivity() {
                         Spacer(modifier = Modifier.height(16.dp))
                         Button(
                             onClick = {
-                                ItineraryManager.startLiveRecording(context, recordingNameInput.ifBlank { "Fretado - Ida ao Trabalho" }, localAtualLat, localAtualLng)
                                 showRecordPromptDialog = false
                                 alertaAtivo = true
                                 salvarConfiguracoes()
+                                ItineraryManager.startLiveRecording(context, recordingNameInput.ifBlank { "Fretado - Ida ao Trabalho" }, localAtualLat, localAtualLng)
                                 iniciarMonitoramento()
                                 Toast.makeText(context, "🔴 Gravação do trajeto iniciada! O indicador REC piscará no mapa.", Toast.LENGTH_SHORT).show()
                             },
@@ -1459,6 +1459,10 @@ class MainActivity : ComponentActivity() {
                         }
 
                         if (!alertaAtivo) {
+                            if (ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+                                requestPermissionLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION)
+                                return@Button
+                            }
                             showRecordPromptDialog = true
                         } else {
                             alertaAtivo = false
