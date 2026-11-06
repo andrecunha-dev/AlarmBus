@@ -62,7 +62,40 @@ class LocationForegroundService : Service() {
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        val routineId = intent?.getStringExtra("routine_id")
         val routineName = intent?.getStringExtra("routine_name") ?: ""
+
+        if (!routineId.isNullOrBlank()) {
+            val destLat = intent.getDoubleExtra("routine_dest_lat", 0.0)
+            val destLng = intent.getDoubleExtra("routine_dest_lng", 0.0)
+            val destAddress = intent.getStringExtra("routine_dest_address") ?: "Destino Programado"
+            val alertDist = intent.getIntExtra("routine_dest_dist", 300)
+            val itineraryId = intent.getStringExtra("routine_itinerary_id")
+
+            if (destLat != 0.0 && destLng != 0.0) {
+                AlarmPreferences.saveAlarmConfig(
+                    context = this,
+                    lat = destLat,
+                    lng = destLng,
+                    address = destAddress,
+                    dist = alertDist,
+                    vibration = AlarmPreferences.isVibrationActive(this),
+                    volLevel = AlarmPreferences.getVolumeLevel(this),
+                    toneUri = AlarmPreferences.getToneUri(this),
+                    active = true
+                )
+
+                if (!itineraryId.isNullOrBlank()) {
+                    ItineraryManager.setActiveItineraryId(this, itineraryId)
+                }
+
+                val routine = RoutineManager.getRoutines(this).find { it.id == routineId }
+                if (routine != null) {
+                    RoutineManager.scheduleRoutineAlarm(this, routine)
+                }
+            }
+        }
+
         val statusText = if (routineName.isNotBlank()) "Rotina '$routineName' ativada!" else "Monitorando sua localização..."
 
         val notification = createTrackingNotification(statusText)
@@ -81,14 +114,6 @@ class LocationForegroundService : Service() {
         }
 
         startLocationTracking()
-
-        val routineId = intent?.getStringExtra("routine_id")
-        if (!routineId.isNullOrBlank()) {
-            val routine = RoutineManager.getRoutines(this).find { it.id == routineId }
-            if (routine != null) {
-                RoutineManager.scheduleRoutineAlarm(this, routine)
-            }
-        }
 
         return START_STICKY
     }

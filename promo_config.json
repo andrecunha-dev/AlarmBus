@@ -1,8 +1,8 @@
 {
   "price": 7.90,
   "days": 30,
-  "latestVersionCode": 52,
-  "latestVersionName": "8.2",
+  "latestVersionCode": 53,
+  "latestVersionName": "9.0",
   "apkDownloadUrl": "https://raw.githubusercontent.com/andrecunha-dev/AlarmBus/main/AlarmBus.apk",
-  "updateNotes": "Execução direta no primeiro clique para início imediato da gravação de trajetos."
+  "updateNotes": "Arquitetura direta de rastreamento do GPS em segundo plano sem necessidade de manter o app aberto."
 }

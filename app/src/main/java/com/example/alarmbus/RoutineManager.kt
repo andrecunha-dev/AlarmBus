@@ -156,16 +156,31 @@ object RoutineManager {
         val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
         val triggerTimeMillis = getNextTriggerTimeMillis(routine.hour, routine.minute, routine.daysOfWeek)
 
-        val intent = Intent(context, RoutineAlarmReceiver::class.java).apply {
+        val serviceIntent = Intent(context, LocationForegroundService::class.java).apply {
             putExtra("routine_id", routine.id)
+            putExtra("routine_name", routine.name)
+            putExtra("routine_dest_lat", routine.destLat)
+            putExtra("routine_dest_lng", routine.destLng)
+            putExtra("routine_dest_address", routine.destAddress)
+            putExtra("routine_dest_dist", routine.alertDist)
+            putExtra("routine_itinerary_id", routine.itineraryId ?: "")
         }
 
-        val pendingIntent = PendingIntent.getBroadcast(
-            context,
-            routine.id.hashCode(),
-            intent,
-            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-        )
+        val pendingIntent = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            PendingIntent.getForegroundService(
+                context,
+                routine.id.hashCode(),
+                serviceIntent,
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+            )
+        } else {
+            PendingIntent.getService(
+                context,
+                routine.id.hashCode(),
+                serviceIntent,
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+            )
+        }
 
         try {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && !alarmManager.canScheduleExactAlarms()) {
@@ -174,28 +189,30 @@ object RoutineManager {
 
             val alarmClockInfo = AlarmManager.AlarmClockInfo(triggerTimeMillis, pendingIntent)
             alarmManager.setAlarmClock(alarmClockInfo, pendingIntent)
-            Log.d("RoutineManager", "Rotina '${routine.name}' agendada com setAlarmClock para: ${java.util.Date(triggerTimeMillis)}")
+            Log.d("RoutineManager", "Rotina '${routine.name}' agendada via Direct ForegroundService para: ${java.util.Date(triggerTimeMillis)}")
         } catch (e: Exception) {
             Log.e("RoutineManager", "Erro ao agendar rotina via setAlarmClock", e)
-            try {
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                    alarmManager.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, triggerTimeMillis, pendingIntent)
-                }
-            } catch (ex: Exception) {
-                Log.e("RoutineManager", "Erro fallback agendamento rotina", ex)
-            }
         }
     }
 
     fun cancelRoutineAlarm(context: Context, routineId: String) {
         val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
-        val intent = Intent(context, RoutineAlarmReceiver::class.java)
-        val pendingIntent = PendingIntent.getBroadcast(
-            context,
-            routineId.hashCode(),
-            intent,
-            PendingIntent.FLAG_NO_CREATE or PendingIntent.FLAG_IMMUTABLE
-        )
+        val serviceIntent = Intent(context, LocationForegroundService::class.java)
+        val pendingIntent = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            PendingIntent.getForegroundService(
+                context,
+                routineId.hashCode(),
+                serviceIntent,
+                PendingIntent.FLAG_NO_CREATE or PendingIntent.FLAG_IMMUTABLE
+            )
+        } else {
+            PendingIntent.getService(
+                context,
+                routineId.hashCode(),
+                serviceIntent,
+                PendingIntent.FLAG_NO_CREATE or PendingIntent.FLAG_IMMUTABLE
+            )
+        }
         if (pendingIntent != null) {
             alarmManager.cancel(pendingIntent)
             pendingIntent.cancel()
@@ -208,7 +225,6 @@ object RoutineManager {
         val currentHour = now.get(Calendar.HOUR_OF_DAY)
         val currentMin = now.get(Calendar.MINUTE)
 
-        // Se for o mesmo dia e minuto do teste atual, agenda para daqui a 3 segundos no futuro
         if (daysOfWeek.contains(currentDay) && hour == currentHour && minute == currentMin) {
             return now.timeInMillis + 3000L
         }
@@ -220,7 +236,6 @@ object RoutineManager {
             set(Calendar.MILLISECOND, 0)
         }
 
-        // Procura o próximo dia e horário válido
         for (i in 0..7) {
             val dayOfWeek = target.get(Calendar.DAY_OF_WEEK)
             if (daysOfWeek.contains(dayOfWeek) && target.timeInMillis > now.timeInMillis) {
