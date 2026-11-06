@@ -1,8 +1,8 @@
 {
   "price": 7.90,
   "days": 30,
-  "latestVersionCode": 50,
-  "latestVersionName": "8.0",
+  "latestVersionCode": 51,
+  "latestVersionName": "8.1",
   "apkDownloadUrl": "https://raw.githubusercontent.com/andrecunha-dev/AlarmBus/main/AlarmBus.apk",
-  "updateNotes": "Ativação da tela cheia de alarme AlarmActivity para despertar o celular bloqueado em segundo plano."
+  "updateNotes": "Ativação do monitoramento direto e instantâneo no primeiro clique do botão."
 }
