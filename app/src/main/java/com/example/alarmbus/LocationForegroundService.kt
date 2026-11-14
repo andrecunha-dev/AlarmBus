@@ -50,7 +50,23 @@ class LocationForegroundService : Service() {
         notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         createNotificationChannels()
 
-        // Adquire WakeLock parcial para impedi que o Android congele o GPS no bolso (Modo Doze)
+        // Chama startForeground imediatamente em 1ms no onCreate() para garantir a aprovação do Android
+        try {
+            val notification = createTrackingNotification("Monitorando sua localização...")
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                startForeground(
+                    NOTIFICATION_ID,
+                    notification,
+                    ServiceInfo.FOREGROUND_SERVICE_TYPE_LOCATION
+                )
+            } else {
+                startForeground(NOTIFICATION_ID, notification)
+            }
+        } catch (e: Exception) {
+            Log.e("LocationService", "Erro no startForeground onCreate: ${e.message}")
+        }
+
+        // Adquire WakeLock parcial para impedir que o Android congele o GPS no bolso (Modo Doze)
         try {
             val powerManager = getSystemService(Context.POWER_SERVICE) as PowerManager
             wakeLock = powerManager.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "AlarmBus::GPSWakeLock").apply {
