@@ -1587,6 +1587,9 @@ class MainActivity : ComponentActivity() {
                     }
 
                     val serviceIntent = Intent(this, LocationForegroundService::class.java)
+                    // Para qualquer instância anterior para garantir a inicialização limpa sem timeout
+                    stopService(serviceIntent)
+
                     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                         startForegroundService(serviceIntent)
                     } else {

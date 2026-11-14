@@ -1,8 +1,8 @@
 {
   "price": 7.90,
   "days": 30,
-  "latestVersionCode": 55,
-  "latestVersionName": "10.1",
+  "latestVersionCode": 56,
+  "latestVersionName": "10.2",
   "apkDownloadUrl": "https://raw.githubusercontent.com/andrecunha-dev/AlarmBus/main/AlarmBus.apk",
-  "updateNotes": "Inicialização imediata de serviço no onCreate para eliminar exceções e falhas ao selecionar trajetos salvos."
+  "updateNotes": "Limpeza de instâncias anteriores e confirmação instantânea de startForeground no monitoramento."
 }
