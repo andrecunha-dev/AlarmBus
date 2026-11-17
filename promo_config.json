@@ -1,8 +1,8 @@
 {
   "price": 7.90,
   "days": 30,
-  "latestVersionCode": 58,
-  "latestVersionName": "10.4",
+  "latestVersionCode": 1,
+  "latestVersionName": "1.0",
   "apkDownloadUrl": "https://raw.githubusercontent.com/andrecunha-dev/AlarmBus/main/AlarmBus.apk",
-  "updateNotes": "Resolução completa de compatibilidade com histórico antigo de preferências."
+  "updateNotes": "Versão oficial 1.0 do AlarmBus GPS."
 }
