@@ -26,7 +26,7 @@ object UpdateManager {
     suspend fun checkForUpdates(context: Context): UpdateInfo {
         return withContext(Dispatchers.IO) {
             try {
-                val url = URL("https://raw.githubusercontent.com/andrecunha-dev/AlarmBus/main/promo_config.json")
+                val url = URL("https://raw.githubusercontent.com/andrecunha-dev/AlarmBus/main/promo_config.json?ts=${System.currentTimeMillis()}")
                 val conn = (url.openConnection() as HttpURLConnection).apply {
                     setRequestProperty("User-Agent", "AlarmBus/1.0")
                     connectTimeout = 6000
