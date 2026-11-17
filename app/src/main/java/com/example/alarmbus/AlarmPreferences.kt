@@ -5,12 +5,13 @@ import android.net.Uri
 
 /**
  * Gerenciador de preferências para persistência de dados de configuração do alarme e histórico.
+ * Utiliza precisão de 64 bits (Double.doubleToRawLongBits) para armazenar coordenadas GPS com exatidão milimétrica.
  */
 object AlarmPreferences {
     private const val PREFS_NAME = "alarmbus_prefs"
 
-    private const val KEY_DEST_LAT = "dest_lat"
-    private const val KEY_DEST_LNG = "dest_lng"
+    private const val KEY_DEST_LAT = "dest_lat_v2"
+    private const val KEY_DEST_LNG = "dest_lng_v2"
     private const val KEY_DEST_ADDRESS = "dest_address"
     private const val KEY_ALERT_DIST = "alert_dist"
     private const val KEY_VIBRATION = "vibration"
@@ -32,8 +33,8 @@ object AlarmPreferences {
     ) {
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
         val editor = prefs.edit()
-        editor.putFloat(KEY_DEST_LAT, lat.toFloat())
-        editor.putFloat(KEY_DEST_LNG, lng.toFloat())
+        editor.putLong(KEY_DEST_LAT, java.lang.Double.doubleToRawLongBits(lat))
+        editor.putLong(KEY_DEST_LNG, java.lang.Double.doubleToRawLongBits(lng))
         editor.putString(KEY_DEST_ADDRESS, address)
         editor.putInt(KEY_ALERT_DIST, dist)
         editor.putBoolean(KEY_VIBRATION, vibration)
@@ -54,11 +55,25 @@ object AlarmPreferences {
             .getBoolean(KEY_ALARM_ACTIVE, false)
     }
 
-    fun getDestLat(context: Context): Double =
-        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).getFloat(KEY_DEST_LAT, 0f).toDouble()
+    fun getDestLat(context: Context): Double {
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        val longVal = prefs.getLong(KEY_DEST_LAT, 0L)
+        return if (longVal != 0L) {
+            java.lang.Double.longBitsToDouble(longVal)
+        } else {
+            prefs.getFloat("dest_lat", 0f).toDouble()
+        }
+    }
 
-    fun getDestLng(context: Context): Double =
-        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).getFloat(KEY_DEST_LNG, 0f).toDouble()
+    fun getDestLng(context: Context): Double {
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        val longVal = prefs.getLong(KEY_DEST_LNG, 0L)
+        return if (longVal != 0L) {
+            java.lang.Double.longBitsToDouble(longVal)
+        } else {
+            prefs.getFloat("dest_lng", 0f).toDouble()
+        }
+    }
 
     fun getDestAddress(context: Context): String =
         context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).getString(KEY_DEST_ADDRESS, "") ?: ""
@@ -78,13 +93,24 @@ object AlarmPreferences {
     }
 
     fun saveHistorico(context: Context, list: List<String>) {
-        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).edit()
-            .putStringSet(KEY_HISTORICO, list.toSet())
-            .apply()
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        val jsonArray = org.json.JSONArray()
+        list.distinct().take(10).forEach { jsonArray.put(it) }
+        prefs.edit().putString(KEY_HISTORICO, jsonArray.toString()).apply()
     }
 
     fun getHistorico(context: Context): List<String> {
-        val set = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).getStringSet(KEY_HISTORICO, emptySet())
-        return set?.toList() ?: emptyList()
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        val jsonStr = prefs.getString(KEY_HISTORICO, "[]") ?: "[]"
+        val list = mutableListOf<String>()
+        try {
+            val jsonArray = org.json.JSONArray(jsonStr)
+            for (i in 0 until jsonArray.length()) {
+                list.add(jsonArray.getString(i))
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+        return list
     }
 }

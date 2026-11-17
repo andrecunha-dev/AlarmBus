@@ -180,9 +180,9 @@ class LocationForegroundService : Service() {
     }
 
     private fun startLocationTracking() {
-        val locationRequest = LocationRequest.Builder(Priority.PRIORITY_HIGH_ACCURACY, 1000L)
-            .setMinUpdateIntervalMillis(1000L)
-            .setMinUpdateDistanceMeters(0f)
+        val locationRequest = LocationRequest.Builder(Priority.PRIORITY_HIGH_ACCURACY, 3000L)
+            .setMinUpdateIntervalMillis(2000L)
+            .setMinUpdateDistanceMeters(2f)
             .setGranularity(Granularity.GRANULARITY_FINE)
             .setWaitForAccurateLocation(false)
             .build()
