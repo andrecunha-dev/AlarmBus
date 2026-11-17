@@ -215,7 +215,9 @@ class LocationForegroundService : Service() {
         val active = AlarmPreferences.isAlarmActive(this)
 
         if (destLat == 0.0 || destLng == 0.0 || !active) {
-            stopSelf()
+            if (::locationCallback.isInitialized) {
+                fusedLocationClient.removeLocationUpdates(locationCallback)
+            }
             return
         }
 
@@ -231,7 +233,9 @@ class LocationForegroundService : Service() {
 
     private fun processarDistanciaEAlarme(location: Location, realDistance: Float, alertDist: Int) {
         if (!AlarmPreferences.isAlarmActive(this)) {
-            stopSelf()
+            if (::locationCallback.isInitialized) {
+                fusedLocationClient.removeLocationUpdates(locationCallback)
+            }
             return
         }
 

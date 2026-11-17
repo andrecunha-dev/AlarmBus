@@ -1587,16 +1587,7 @@ class MainActivity : ComponentActivity() {
                     }
 
                     val serviceIntent = Intent(this, LocationForegroundService::class.java)
-
-                    if (LocationForegroundService.isServiceRunning) {
-                        startService(serviceIntent)
-                    } else {
-                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                            startForegroundService(serviceIntent)
-                        } else {
-                            startService(serviceIntent)
-                        }
-                    }
+                    ContextCompat.startForegroundService(this, serviceIntent)
 
                     alertaAtivo = true
                     mensagem = "Monitoramento ativado"

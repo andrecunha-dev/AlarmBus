@@ -210,14 +210,6 @@ object AlarmPlayer {
             Log.e("AlarmPlayer", "Erro ao cancelar notificação", e)
         }
 
-        // 2. Para o serviço de monitoramento em segundo plano para sumir com a notificação
-        try {
-            val serviceIntent = Intent(context, LocationForegroundService::class.java)
-            context.stopService(serviceIntent)
-        } catch (e: Exception) {
-            Log.e("AlarmPlayer", "Erro ao parar location service", e)
-        }
-
         // 3. Para a mídia
         try {
             val player = mediaPlayer

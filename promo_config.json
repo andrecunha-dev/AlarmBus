@@ -1,8 +1,8 @@
 {
   "price": 7.90,
   "days": 30,
-  "latestVersionCode": 61,
-  "latestVersionName": "10.7",
+  "latestVersionCode": 63,
+  "latestVersionName": "10.9",
   "apkDownloadUrl": "https://raw.githubusercontent.com/andrecunha-dev/AlarmBus/main/AlarmBus.apk",
-  "updateNotes": "Corrigido o tipo de dado da distância nas atualizações de localização para evitar o fechamento da tela."
+  "updateNotes": "Remoção de stopService redundante e ativação garantida de ContextCompat.startForegroundService."
 }

@@ -13,14 +13,6 @@ class AlarmActionReceiver : BroadcastReceiver() {
         val action = intent?.action
         if ("com.example.alarmbus.ACTION_STOP_ALARM" == action || "PARAR_ALARME" == action) {
             AlarmPlayer.stopAlarm(context)
-            
-            // Para também o serviço de localização em primeiro plano se o alarme for desativado
-            try {
-                val serviceIntent = Intent(context, LocationForegroundService::class.java)
-                context.stopService(serviceIntent)
-            } catch (e: Exception) {
-                // Ignora erro ao parar serviço
-            }
         }
     }
 }
