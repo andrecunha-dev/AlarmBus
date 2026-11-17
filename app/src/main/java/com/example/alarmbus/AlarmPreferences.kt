@@ -101,12 +101,23 @@ object AlarmPreferences {
 
     fun getHistorico(context: Context): List<String> {
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-        val jsonStr = prefs.getString(KEY_HISTORICO, "[]") ?: "[]"
         val list = mutableListOf<String>()
         try {
+            val jsonStr = prefs.getString(KEY_HISTORICO, "[]") ?: "[]"
             val jsonArray = org.json.JSONArray(jsonStr)
             for (i in 0 until jsonArray.length()) {
                 list.add(jsonArray.getString(i))
+            }
+        } catch (e: ClassCastException) {
+            try {
+                @Suppress("UNCHECKED_CAST")
+                val oldSet = prefs.getStringSet(KEY_HISTORICO, emptySet())
+                if (!oldSet.isNullOrEmpty()) {
+                    list.addAll(oldSet)
+                    saveHistorico(context, list)
+                }
+            } catch (ex: Exception) {
+                prefs.edit().remove(KEY_HISTORICO).apply()
             }
         } catch (e: Exception) {
             e.printStackTrace()
