@@ -253,9 +253,9 @@ class MainActivity : ComponentActivity() {
                         localAtualLng = lng
                     }
 
-                    val dist = intent.getFloatExtra("distancia", -1f)
-                    if (dist >= 0) {
-                        distanciaRestante = dist
+                    val dist = intent.getDoubleExtra("distancia", -1.0)
+                    if (dist >= 0.0) {
+                        distanciaRestante = dist.toFloat()
                     }
                 }
                 "com.example.alarmbus.ACTION_ALARM_STOPPED" -> {
