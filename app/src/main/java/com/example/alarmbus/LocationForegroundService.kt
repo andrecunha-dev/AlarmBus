@@ -182,6 +182,13 @@ class LocationForegroundService : Service() {
     }
 
     private fun startLocationTracking() {
+        if (::locationCallback.isInitialized) {
+            try {
+                fusedLocationClient.removeLocationUpdates(locationCallback)
+            } catch (e: Exception) {
+            }
+        }
+
         val locationRequest = LocationRequest.Builder(Priority.PRIORITY_HIGH_ACCURACY, 3000L)
             .setMinUpdateIntervalMillis(2000L)
             .setMinUpdateDistanceMeters(2f)

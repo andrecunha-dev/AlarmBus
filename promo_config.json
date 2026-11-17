@@ -1,8 +1,8 @@
 {
   "price": 7.90,
   "days": 30,
-  "latestVersionCode": 63,
-  "latestVersionName": "10.9",
+  "latestVersionCode": 64,
+  "latestVersionName": "11.0",
   "apkDownloadUrl": "https://raw.githubusercontent.com/andrecunha-dev/AlarmBus/main/AlarmBus.apk",
-  "updateNotes": "Remoção de stopService redundante e ativação garantida de ContextCompat.startForegroundService."
+  "updateNotes": "Persistência síncrona de estado ativo do alarme e renovação garantida de callbacks de localização."
 }

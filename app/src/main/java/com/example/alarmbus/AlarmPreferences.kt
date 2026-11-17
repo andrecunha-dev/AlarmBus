@@ -41,13 +41,13 @@ object AlarmPreferences {
         editor.putFloat(KEY_VOLUME_LEVEL, volLevel)
         editor.putString(KEY_TONE_URI, toneUri?.toString())
         editor.putBoolean(KEY_ALARM_ACTIVE, active)
-        editor.apply()
+        editor.commit()
     }
 
     fun setAlarmActive(context: Context, active: Boolean) {
         context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).edit()
             .putBoolean(KEY_ALARM_ACTIVE, active)
-            .apply()
+            .commit()
     }
 
     fun isAlarmActive(context: Context): Boolean {
