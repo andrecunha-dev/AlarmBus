@@ -1588,10 +1588,14 @@ class MainActivity : ComponentActivity() {
 
                     val serviceIntent = Intent(this, LocationForegroundService::class.java)
 
-                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                        startForegroundService(serviceIntent)
-                    } else {
+                    if (LocationForegroundService.isServiceRunning) {
                         startService(serviceIntent)
+                    } else {
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                            startForegroundService(serviceIntent)
+                        } else {
+                            startService(serviceIntent)
+                        }
                     }
 
                     alertaAtivo = true

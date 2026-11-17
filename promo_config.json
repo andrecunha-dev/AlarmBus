@@ -1,8 +1,8 @@
 {
   "price": 7.90,
   "days": 30,
-  "latestVersionCode": 59,
-  "latestVersionName": "10.5",
+  "latestVersionCode": 60,
+  "latestVersionName": "10.6",
   "apkDownloadUrl": "https://raw.githubusercontent.com/andrecunha-dev/AlarmBus/main/AlarmBus.apk",
-  "updateNotes": "Eliminação da condição de corrida no religamento do monitoramento."
+  "updateNotes": "Rastreamento dinâmico de isServiceRunning para inicialização instantânea e sem exceções."
 }

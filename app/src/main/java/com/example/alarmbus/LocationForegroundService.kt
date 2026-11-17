@@ -40,12 +40,14 @@ class LocationForegroundService : Service() {
         const val NOTIFICATION_ID = 1001
         const val CHANNEL_LOCATION_ID = "location_channel"
         const val CHANNEL_ALARM_ID = "alarm_channel"
+        var isServiceRunning = false
     }
 
     override fun onBind(intent: Intent?): IBinder? = null
 
     override fun onCreate() {
         super.onCreate()
+        isServiceRunning = true
         fusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
         notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         createNotificationChannels()
@@ -268,6 +270,7 @@ class LocationForegroundService : Service() {
 
     override fun onDestroy() {
         super.onDestroy()
+        isServiceRunning = false
         try {
             if (wakeLock?.isHeld == true) {
                 wakeLock?.release()
