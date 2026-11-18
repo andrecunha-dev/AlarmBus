@@ -165,8 +165,7 @@ class LocationForegroundService : Service() {
         val alarmIntent = Intent(this, AlarmActivity::class.java).apply {
             addFlags(
                 Intent.FLAG_ACTIVITY_NEW_TASK or
-                Intent.FLAG_ACTIVITY_SINGLE_TOP or
-                Intent.FLAG_ACTIVITY_CLEAR_TOP
+                Intent.FLAG_ACTIVITY_SINGLE_TOP
             )
         }
         val fullScreenPendingIntent = PendingIntent.getActivity(

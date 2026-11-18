@@ -1,8 +1,8 @@
 {
   "price": 7.90,
   "days": 30,
-  "latestVersionCode": 65,
-  "latestVersionName": "11.1",
+  "latestVersionCode": 66,
+  "latestVersionName": "11.2",
   "apkDownloadUrl": "https://raw.githubusercontent.com/andrecunha-dev/AlarmBus/main/AlarmBus.apk",
-  "updateNotes": "Injeção direta do payload de destino e ativação garantida do serviço."
+  "updateNotes": "Preservação da MainActivity ao disparar o alarme removendo a flag CLEAR_TOP."
 }
