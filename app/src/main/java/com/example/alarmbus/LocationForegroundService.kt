@@ -230,7 +230,7 @@ class LocationForegroundService : Service() {
 
         val locationRequest = LocationRequest.Builder(Priority.PRIORITY_HIGH_ACCURACY, 3000L)
             .setMinUpdateIntervalMillis(2000L)
-            .setMinUpdateDistanceMeters(2f)
+            .setMinUpdateDistanceMeters(0f)
             .setGranularity(Granularity.GRANULARITY_FINE)
             .setWaitForAccurateLocation(false)
             .build()
@@ -246,6 +246,16 @@ class LocationForegroundService : Service() {
         }
 
         if (ContextCompat.checkSelfPermission(this, android.Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
+            // Executa verificação instantânea na ativação com a última posição conhecida do GPS
+            try {
+                fusedLocationClient.lastLocation.addOnSuccessListener { lastLoc ->
+                    if (lastLoc != null && AlarmPreferences.isAlarmActive(this)) {
+                        verificarProximidade(lastLoc)
+                    }
+                }
+            } catch (e: Exception) {
+            }
+
             fusedLocationClient.requestLocationUpdates(
                 locationRequest,
                 locationCallback,
