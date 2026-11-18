@@ -86,6 +86,25 @@ class LocationForegroundService : Service() {
             val alertDist = intent.getIntExtra("alertDist", 0)
             val active = intent.getBooleanExtra("active", false)
 
+            if (!active) {
+                if (::locationCallback.isInitialized) {
+                    try {
+                        fusedLocationClient.removeLocationUpdates(locationCallback)
+                    } catch (e: Exception) {
+                    }
+                }
+                if (::notificationManager.isInitialized) {
+                    notificationManager.cancel(NOTIFICATION_ID)
+                }
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+                    stopForeground(STOP_FOREGROUND_REMOVE)
+                } else {
+                    @Suppress("DEPRECATION")
+                    stopForeground(true)
+                }
+                return START_STICKY
+            }
+
             if (destLat != 0.0 && destLng != 0.0) {
                 AlarmPreferences.saveAlarmConfig(
                     context = this,
@@ -96,7 +115,7 @@ class LocationForegroundService : Service() {
                     vibration = AlarmPreferences.isVibrationActive(this),
                     volLevel = AlarmPreferences.getVolumeLevel(this),
                     toneUri = AlarmPreferences.getToneUri(this),
-                    active = active
+                    active = true
                 )
             }
         }

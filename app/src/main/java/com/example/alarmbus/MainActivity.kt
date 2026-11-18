@@ -1555,6 +1555,9 @@ class MainActivity : ComponentActivity() {
                 mensagem = "Local definido: ${address.getAddressLine(0)}"
                 salvarNoHistorico(endereco)
                 salvarConfiguracoes()
+                if (alertaAtivo) {
+                    iniciarMonitoramento()
+                }
             } else {
                 mensagem = "Endereço não encontrado"
                 destinoLatitude = 0.0
@@ -1594,6 +1597,7 @@ class MainActivity : ComponentActivity() {
                         putExtra("active", true)
                     }
                     ContextCompat.startForegroundService(this, serviceIntent)
+
                     mensagem = "Monitoramento ativado"
                 } catch (e: Exception) {
                     mensagem = "Erro ao iniciar serviço de monitoramento"
@@ -1617,9 +1621,6 @@ class MainActivity : ComponentActivity() {
         try {
             AlarmPlayer.stopAlarm(this)
 
-            val serviceIntent = Intent(this, LocationForegroundService::class.java)
-            stopService(serviceIntent)
-
             if (ItineraryManager.isRecording(this)) {
                 val savedItin = ItineraryManager.stopAndSaveLiveRecording(this)
                 if (savedItin != null) {
@@ -1634,6 +1635,11 @@ class MainActivity : ComponentActivity() {
             mensagem = "Monitoramento desativado"
             distanciaRestante = null
             salvarConfiguracoes()
+
+            val serviceIntent = Intent(this, LocationForegroundService::class.java).apply {
+                putExtra("active", false)
+            }
+            ContextCompat.startForegroundService(this, serviceIntent)
         } catch (e: Exception) {
             Log.e("MainActivity", "Error stopping location updates", e)
         }
