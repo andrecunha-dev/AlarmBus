@@ -80,6 +80,27 @@ class LocationForegroundService : Service() {
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        if (intent != null) {
+            val destLat = intent.getDoubleExtra("destLat", 0.0)
+            val destLng = intent.getDoubleExtra("destLng", 0.0)
+            val alertDist = intent.getIntExtra("alertDist", 0)
+            val active = intent.getBooleanExtra("active", false)
+
+            if (destLat != 0.0 && destLng != 0.0) {
+                AlarmPreferences.saveAlarmConfig(
+                    context = this,
+                    lat = destLat,
+                    lng = destLng,
+                    address = AlarmPreferences.getDestAddress(this),
+                    dist = if (alertDist > 0) alertDist else AlarmPreferences.getAlertDist(this),
+                    vibration = AlarmPreferences.isVibrationActive(this),
+                    volLevel = AlarmPreferences.getVolumeLevel(this),
+                    toneUri = AlarmPreferences.getToneUri(this),
+                    active = active
+                )
+            }
+        }
+
         val notification = createTrackingNotification("Monitorando sua localização...")
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             startForeground(

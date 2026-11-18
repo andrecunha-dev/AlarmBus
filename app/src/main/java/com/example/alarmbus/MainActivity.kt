@@ -1579,6 +1579,7 @@ class MainActivity : ComponentActivity() {
                 Manifest.permission.ACCESS_FINE_LOCATION
             ) == PackageManager.PERMISSION_GRANTED -> {
                 try {
+                    alertaAtivo = true
                     salvarConfiguracoes()
 
                     if (LicenseManager.hasFreeTrialAvailable(this) && !LicenseManager.isPaidLicenseActive(this)) {
@@ -1586,10 +1587,13 @@ class MainActivity : ComponentActivity() {
                         Toast.makeText(this, "🎁 Você utilizou seu 1º Alerta Grátis de Teste!", Toast.LENGTH_LONG).show()
                     }
 
-                    val serviceIntent = Intent(this, LocationForegroundService::class.java)
+                    val serviceIntent = Intent(this, LocationForegroundService::class.java).apply {
+                        putExtra("destLat", destinoLatitude)
+                        putExtra("destLng", destinoLongitude)
+                        putExtra("alertDist", distanciaAlerta)
+                        putExtra("active", true)
+                    }
                     ContextCompat.startForegroundService(this, serviceIntent)
-
-                    alertaAtivo = true
                     mensagem = "Monitoramento ativado"
                 } catch (e: Exception) {
                     mensagem = "Erro ao iniciar serviço de monitoramento"
